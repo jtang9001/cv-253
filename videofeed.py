@@ -60,8 +60,8 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         blurred,
         cv2.HOUGH_GRADIENT,
         dp = 1.5,
-        minDist = 20,
-        param1 = auto_canny_upper(blurred)
+        minDist = 20
+        #param1 = auto_canny_upper(blurred)
         )
     
     if circles is not None:
