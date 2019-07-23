@@ -23,10 +23,15 @@ time.sleep(0.25)
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     # grab the raw NumPy array representing the image, then initialize the timestamp
     # and occupied/unoccupied text
-    image = frame.array
+    originalImage = frame.array
+
+    grayImage = cv2.cvtColor(originalImage, cv2.COLOR_BGR2GRAY)
+    blurredImage = cv2.GaussianBlur(grayImage, (5,5), 0)
+    
+    
  
     # show the frame
-    cv2.imshow("Frame", image)
+    cv2.imshow("Frame", grayImage)
     key = cv2.waitKey(1) & 0xFF
  
     # clear the stream in preparation for the next frame
