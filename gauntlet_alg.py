@@ -5,6 +5,7 @@ from math import pi
 
 IMGWIDTH = 480
 TAPE_TO_HOLE_RATIO = 1.4
+BINARIZATION_THRESHOLD = 127
 
 #openCV uses BGR
 RED = (0,0,255)
@@ -51,6 +52,7 @@ class PolarVector(Vector):
 class TapeRect:
     def __init__(self, contour):
         self.contour = contour
+        self.contourArea = cv2.contourArea(self.contour)
         self.boundingBox = cv2.minAreaRect(contour)
         self.boundingBoxContour = np.int0(cv2.boxPoints(self.boundingBox))
         self.center = self.boundingBox[0]
@@ -94,6 +96,10 @@ class Gauntlet:
 
     def enumerateTapeRects(self):
         numRects = len(self.rects)
+        if numRects == 0:
+            print("Warning: no rects found in enumerateTapeRects")
+            return
+        
         minCcwDiffs = np.zeros(numRects)
 
         for i in range(numRects):
@@ -123,18 +129,20 @@ def getGauntlet(frame):
     #assumes frame is an opencv image object
 
     greyImg = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    blurredImg = cv2.GaussianBlur(greyImg, (5,5), 0)
-    threshedImg = cv2.threshold(blurredImg, 127, 255, cv2.THRESH_BINARY)[1]
+    blurredImg = cv2.GaussianBlur(greyImg, (7,7), 0)
+    #threshedImg = autoCanny(blurredImg)
+    threshedImg = cv2.threshold(blurredImg, BINARIZATION_THRESHOLD, 255, cv2.THRESH_BINARY)[1]
+    #threshedImg = cv2.adaptiveThreshold(blurredImg, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 151, 1)
     contours = cv2.findContours(threshedImg, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
     rectangles = identifyContours(contours)
     gauntlet = Gauntlet(rectangles)
     gauntlet.enumerateTapeRects()
 
     for rect in rectangles:
-        #cv2.drawContours(frame, [rect.boundingBoxContour], -1, GREEN, 2)
+        cv2.drawContours(frame, [rect.contour], -1, GREEN, 2)
         rect.getIntrinsicVector()
-        #rect.vector.draw(frame)
-        #rect.intrinsicVector.draw(frame, color = BLUE)
+        rect.vector.draw(frame)
+        rect.intrinsicVector.draw(frame, color = BLUE)
         rect.intrinsicVector.drawEnd(frame)
         relCircleCenter = shiftImageCoords(frame, rect.intrinsicVector.end)
 
@@ -146,7 +154,7 @@ def getGauntlet(frame):
             0.75, RED, 2
         )
 
-    #cv2.circle(frame, (int(gauntlet.center[0]), int(gauntlet.center[1])), 3, RED, 2)
+    cv2.circle(frame, (int(gauntlet.center[0]), int(gauntlet.center[1])), 3, RED, 2)
 
     return frame, gauntlet
 
@@ -156,10 +164,14 @@ def identifyContours(contours):
     for contour in contours:
         perimeter = cv2.arcLength(contour, True)
 
-        approxCnt = cv2.approxPolyDP(contour, 0.05*perimeter, True)
+        approxCnt = cv2.approxPolyDP(contour, 0.04*perimeter, True)
         if len(approxCnt) == 4:
             tapeObj = TapeRect(approxCnt)
-            if 1.5 < tapeObj.aspectRatio < 2.5:
+            if all((
+                1.5 < tapeObj.aspectRatio < 3,
+                0.001 < tapeObj.boundingBoxArea/(640*480) < 0.01,
+                tapeObj.contourArea / tapeObj.boundingBoxArea > 0.8
+            )):
                 rectangles.append(tapeObj)
 
     #medianArea = np.median([rect.boundingBoxArea for rect in rectangles])
@@ -170,6 +182,18 @@ def identifyContours(contours):
         )
 
     return rectangles
+
+def autoCanny(image, sigma=0.33):
+    # compute the median of the single channel pixel intensities
+    v = np.median(image)
+ 
+    # apply automatic Canny edge detection using the computed median
+    lower = int(max(0, (1.0 - sigma) * v))
+    upper = int(min(255, (1.0 + sigma) * v))
+    edged = cv2.Canny(image, lower, upper)
+ 
+    # return the edged image
+    return edged
 
 def angleDiff(fromAngle, toAngle):
     return min(
@@ -202,8 +226,6 @@ def degToRad(degrees):
 def shiftImageCoords(img, coord):
     imgWidth = img.shape[1]
     imgHeight = img.shape[0]
-    print(imgWidth)
-    print(imgHeight)
 
     return (round(coord[0] - imgWidth/2), round(imgHeight/2 - coord[1]))
 
