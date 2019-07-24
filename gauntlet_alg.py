@@ -23,7 +23,7 @@ class Vector:
         self.start = start
         self.end = end
         self.vector = [end[0] - start[0], start[1] - end[1]]
-        self.magnitude = (self.vector[0] ** 2)
+        self.magnitude = (self.vector[0]**2 + self.vector[1]**2) ** 0.5
         self.angle = np.arctan2(self.vector[1], self.vector[0])
 
     def draw(self, img, color = CYAN, thickness = 2):
@@ -33,6 +33,10 @@ class Vector:
             tuple(int(x) for x in self.end), 
             color, thickness)
 
+class PolarVector(Vector):
+    def __init__(self, start, mag, angle):
+        super().__init__(start, (start[0] + mag*np.cos(angle), start[1] - mag*np.sin(angle)))
+
 class TapeRect:
     def __init__(self, contour):
         self.contour = contour
@@ -40,17 +44,28 @@ class TapeRect:
         self.boundingBoxContour = np.int0(cv2.boxPoints(self.boundingBox))
         self.center = self.boundingBox[0]
         self.dims = self.boundingBox[1]
-        self.angle = self.boundingBox[2]
+        self.aspectRatio = self.dims[0] / self.dims[1]
         self.boundingBoxArea = self.dims[0] * self.dims[1]
-        self.aspectRatio = max(self.dims) / min(self.dims)
+        self.angle = -1 * self.boundingBox[2]
 
-    def assignNumber(self, number):
-        assert type(number) == int
+        if self.aspectRatio < 1:
+            self.aspectRatio = 1 / self.aspectRatio
+            self.angle += 90
+
+        self.angle = degToRad(self.angle)
+
+    def assignNumber(self, number: int):
         self.number = number
 
-    def assignVector(self, vector):
-        assert type(vector) == Vector
+    def assignVector(self, vector: Vector):
         self.vector = vector
+
+    def getIntrinsicVector(self):
+        assert hasattr(self, "number")
+        assert hasattr(self, "vector")
+        if abs(angleDiff(self.vector.angle, self.angle)) > pi/2:
+            self.angle = (self.angle + pi) % (2*pi)
+        self.intrinsicVector = PolarVector(self.center, 1.4*max(self.dims), self.angle)
 
 class Gauntlet:
     def __init__(self, rectObjs):
@@ -106,16 +121,17 @@ def getGauntlet(frame):
 
     for rect in rectangles:
         cv2.drawContours(frame, [rect.boundingBoxContour], -1, GREEN, 2)
+        rect.getIntrinsicVector()
+        rect.vector.draw(frame)
+        rect.intrinsicVector.draw(frame, color = BLUE)
 
-        if hasattr(rect, "number") and hasattr(rect, "vector"):
-            rect.vector.draw(frame)
-            cv2.putText(
-                frame,
-                str(rect.number),
-                (int(rect.center[0]), int(rect.center[1])),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.75, RED, 2
-            )
+        cv2.putText(
+            frame,
+            "{:.3f}, {:.3f}".format(rect.vector.angle, rect.intrinsicVector.angle),
+            (int(rect.center[0]), int(rect.center[1])),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.75, RED, 2
+        )
 
     cv2.circle(frame, (int(gauntlet.center[0]), int(gauntlet.center[1])), 3, RED, 2)
 
@@ -142,8 +158,15 @@ def identifyContours(contours):
     return rectangles
 
 def angleDiff(fromAngle, toAngle):
-    naiveDiff = fromAngle - toAngle
-    return (naiveDiff + pi) % (2*pi) - pi
+    return min(
+        (
+            angleDiffCCW(fromAngle, toAngle),
+            angleDiffCW(fromAngle, toAngle)
+        ), 
+        key = lambda x: abs(x)
+    )
+    # naiveDiff = fromAngle - toAngle
+    # return (naiveDiff + pi) % (2*pi) - pi
 
 def angleDiffCCW(fromAngle, toAngle):
     naiveDiff = toAngle - fromAngle
@@ -158,6 +181,9 @@ def angleDiffCW(fromAngle, toAngle):
         return naiveDiff - 2*pi
     else:
         return naiveDiff
+
+def degToRad(degrees):
+    return degrees * pi / 180
 
 import glob
 
