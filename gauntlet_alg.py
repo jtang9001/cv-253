@@ -140,7 +140,7 @@ def getGauntlet(frame):
 
         cv2.putText(
             frame,
-            "{:.1f},{:.1f}".format(relCircleCenter[0], relCircleCenter[1]),
+            "{}".format(rect.number),
             (int(rect.center[0]), int(rect.center[1])),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.75, RED, 2
@@ -148,7 +148,7 @@ def getGauntlet(frame):
 
     #cv2.circle(frame, (int(gauntlet.center[0]), int(gauntlet.center[1])), 3, RED, 2)
 
-    return frame
+    return frame, gauntlet
 
 def identifyContours(contours):
     rectangles = []

@@ -4,17 +4,26 @@ from picamera import PiCamera
 import time
 import cv2
 import numpy as np
+from .gauntlet_alg import getGauntlet, Gauntlet
+import serial
  
 # initialize the camera and grab a reference to the raw camera capture
 res = (640, 480)
 
-camera = PiCamera(
-    #sensor_mode=4,
-    resolution=res,
-    framerate=20)
-#camera.resolution = (640, 480)
-#camera.framerate = 20
+ser = serial.Serial(
+    port = "/dev/ttyS0",
+    timeout = 1.0
+)
+
+camera = PiCamera(resolution=res, framerate=20)
 rawCapture = PiRGBArray(camera, size=res)
+
+def writeGauntletPos(gauntObj: Gauntlet):
+    dataStr = "G"
+    for rect in gauntObj.rects:
+        dataStr += "{},{};".format(rect.intrinsicVector.end[0], rect.intrinsicVector.end[1])
+    dataStr += "\n"
+    ser.write(dataStr)
 
 # allow the camera to warmup
 time.sleep(0.25)
@@ -25,13 +34,11 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     # and occupied/unoccupied text
     originalImage = frame.array
 
-    grayImage = cv2.cvtColor(originalImage, cv2.COLOR_BGR2GRAY)
-    blurredImage = cv2.GaussianBlur(grayImage, (5,5), 0)
-    
-    
+    processedImage, gauntletObj = getGauntlet(frame)
+    writeGauntletPos(gauntletObj)
  
     # show the frame
-    cv2.imshow("Frame", grayImage)
+    cv2.imshow("Frame", processedImage)
     key = cv2.waitKey(1) & 0xFF
  
     # clear the stream in preparation for the next frame
