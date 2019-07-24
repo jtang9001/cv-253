@@ -3,7 +3,8 @@ import numpy as np
 import imutils
 from math import pi
 
-IMGWIDTH = 1200
+IMGWIDTH = 480
+TAPE_TO_HOLE_RATIO = 1.4
 
 #openCV uses BGR
 RED = (0,0,255)
@@ -32,6 +33,16 @@ class Vector:
             tuple(int(x) for x in self.start), 
             tuple(int(x) for x in self.end), 
             color, thickness)
+
+    def drawEnd(self, img, color = BLUE, radius = 2, thickness = 2):
+        cv2.circle(img, tuple(int(x) for x in self.end), radius, color, thickness)
+
+    def drawStart(self, img, color = RED, radius = 2, thickness = 2):
+        cv2.circle(img, tuple(int(x) for x in self.start), radius, color, thickness)
+
+    def drawEndpoints(self, img, color = BLUE, radius = 2, thickness = 2):
+        cv2.circle(img, tuple(int(x) for x in self.end), radius, color, thickness)
+        cv2.circle(img, tuple(int(x) for x in self.start), radius, color, thickness)
 
 class PolarVector(Vector):
     def __init__(self, start, mag, angle):
@@ -65,7 +76,7 @@ class TapeRect:
         assert hasattr(self, "vector")
         if abs(angleDiff(self.vector.angle, self.angle)) > pi/2:
             self.angle = (self.angle + pi) % (2*pi)
-        self.intrinsicVector = PolarVector(self.center, 1.4*max(self.dims), self.angle)
+        self.intrinsicVector = PolarVector(self.center, TAPE_TO_HOLE_RATIO*max(self.dims), self.angle)
 
 class Gauntlet:
     def __init__(self, rectObjs):
@@ -120,20 +131,22 @@ def getGauntlet(frame):
     gauntlet.enumerateTapeRects()
 
     for rect in rectangles:
-        cv2.drawContours(frame, [rect.boundingBoxContour], -1, GREEN, 2)
+        #cv2.drawContours(frame, [rect.boundingBoxContour], -1, GREEN, 2)
         rect.getIntrinsicVector()
-        rect.vector.draw(frame)
-        rect.intrinsicVector.draw(frame, color = BLUE)
+        #rect.vector.draw(frame)
+        #rect.intrinsicVector.draw(frame, color = BLUE)
+        rect.intrinsicVector.drawEnd(frame)
+        relCircleCenter = shiftImageCoords(frame, rect.intrinsicVector.end)
 
         cv2.putText(
             frame,
-            "{:.3f}, {:.3f}".format(rect.vector.angle, rect.intrinsicVector.angle),
+            "{:.1f},{:.1f}".format(relCircleCenter[0], relCircleCenter[1]),
             (int(rect.center[0]), int(rect.center[1])),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.75, RED, 2
         )
 
-    cv2.circle(frame, (int(gauntlet.center[0]), int(gauntlet.center[1])), 3, RED, 2)
+    #cv2.circle(frame, (int(gauntlet.center[0]), int(gauntlet.center[1])), 3, RED, 2)
 
     return frame
 
@@ -143,14 +156,15 @@ def identifyContours(contours):
     for contour in contours:
         perimeter = cv2.arcLength(contour, True)
 
-        approxCnt = cv2.approxPolyDP(contour, 0.03*perimeter, True)
+        approxCnt = cv2.approxPolyDP(contour, 0.05*perimeter, True)
         if len(approxCnt) == 4:
             tapeObj = TapeRect(approxCnt)
             if 1.5 < tapeObj.aspectRatio < 2.5:
                 rectangles.append(tapeObj)
 
-    medianArea = np.median([rect.boundingBoxArea for rect in rectangles])
+    #medianArea = np.median([rect.boundingBoxArea for rect in rectangles])
     while len(rectangles) > 6:
+        medianArea = np.median([rect.boundingBoxArea for rect in rectangles])
         rectangles.remove(
             max(rectangles, key = lambda rect: abs(rect.boundingBoxArea - medianArea))
         )
@@ -185,11 +199,21 @@ def angleDiffCW(fromAngle, toAngle):
 def degToRad(degrees):
     return degrees * pi / 180
 
-import glob
+def shiftImageCoords(img, coord):
+    imgWidth = img.shape[1]
+    imgHeight = img.shape[0]
+    print(imgWidth)
+    print(imgHeight)
 
-for img in glob.glob("*.jpg"):
-    originalImg = cv2.imread(img)
-    resizedImg = imutils.resize(originalImg, width=IMGWIDTH)
+    return (round(coord[0] - imgWidth/2), round(imgHeight/2 - coord[1]))
 
-    cv2.imshow("Frame", getGauntlet(resizedImg))
-    cv2.waitKey(0)
+
+if __name__ == "__main__":
+    import glob
+
+    for img in glob.glob("*.jpg"):
+        originalImg = cv2.imread(img)
+        resizedImg = imutils.resize(originalImg, width=IMGWIDTH)
+
+        cv2.imshow("Frame", getGauntlet(resizedImg))
+        cv2.waitKey(0)
