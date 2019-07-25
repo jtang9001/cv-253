@@ -4,12 +4,12 @@ import imutils
 import itertools
 from math import pi
 
-IMGWIDTH = 972
-TAPE_TO_HOLE_RATIO = 1.4
+IMGWIDTH = 480
+TAPE_TO_HOLE_RATIO = 1.35
 BINARIZATION_THRESHOLD = 80
 POLY_APPROX_COEFF = 0.05
-IMGRES = (1296,972)
-IMGAREA = 1296*972
+IMGRES = (640,480)
+IMGAREA = IMGRES[0] * IMGRES[1]
 
 #openCV uses BGR
 RED = (0,0,255)
@@ -121,9 +121,9 @@ class TapeRect:
 
 class Gauntlet:
     def __init__(self, rectObjs):
-        # centerX = np.mean([rect.center[0] for rect in rectObjs])
-        # centerY = np.mean([rect.center[1] for rect in rectObjs])
-        # self.rectMean = (centerX, centerY)
+        centerX = np.mean([rect.center[0] for rect in rectObjs])
+        centerY = np.mean([rect.center[1] for rect in rectObjs])
+        self.rectMean = (centerX, centerY)
         self.rects = []
         
         for rect in rectObjs:
@@ -161,6 +161,7 @@ class Gauntlet:
 
     def encircleRects(self):
         assert len(self.rects) >= 3
+        
         self.circles = []
 
         for comb in itertools.combinations(self.rects, 3):
@@ -172,7 +173,7 @@ class Gauntlet:
         smallestCircle = min(self.circles, key = lambda circle: circle.r)
         self.circles = [
             circle for circle in self.circles \
-                if dist(circle.center, smallestCircle.center) < 0.05*IMGWIDTH
+                if dist(circle.center, smallestCircle.center) < 0.1*IMGWIDTH
             ]
 
         centerX = np.mean([circle.x for circle in self.circles])
@@ -180,6 +181,7 @@ class Gauntlet:
         self.avgR = np.mean([circle.r for circle in self.circles])
         self.center = (centerX, centerY)
         self.centerCircle = Circle(centerX, centerY, self.avgR)
+        print(self.avgR)
 
         self.rects = [
             rect for rect in self.rects \
@@ -238,6 +240,7 @@ class Gauntlet:
                 cv2.putText(
                     frame,
                     "{}".format(rect.number),
+                    #"{:.3}".format(rect.contourArea / IMGAREA),
                     (int(rect.center[0]), int(rect.center[1])),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.75, ORANGE, 2
@@ -246,13 +249,14 @@ class Gauntlet:
         # for circle in gauntlet.circles:
         #     circle.draw(frame)
 
-        self.centerCircle.draw(frame)
-        cv2.circle(frame, (int(self.center[0]), int(self.center[1])), 3, RED, 2)
-        self.refVector.draw(frame, color = VIOLET)
+        if hasattr(self, "center"):
+            self.centerCircle.draw(frame)
+            cv2.circle(frame, (int(self.center[0]), int(self.center[1])), 3, RED, 2)
+        
+        if hasattr(self, "refVector"):
+            self.refVector.draw(frame, color = VIOLET)
 
-
-
-def getGauntlet(frame):
+def preprocessFrame(frame):
     #assumes frame is an opencv image object
 
     greyImg = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -268,16 +272,17 @@ def getGauntlet(frame):
 
     # edgedImg = autoCanny(blurredImg)
     
-    frame = cv2.cvtColor(greyImg, cv2.COLOR_GRAY2BGR)
+    #frame = cv2.cvtColor(threshedImg, cv2.COLOR_GRAY2BGR)
+    return threshedImg
 
-    contours = cv2.findContours(threshedImg, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
+def getGauntlet(frame):
+    contours = cv2.findContours(frame, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
     # cv2.drawContours(frame, contours, -1, YELLOW, 2)
     # lines = cv2.HoughLinesP(edgedImg, 1, degToRad(1), 50, None, 50, 10)
     # for line in lines:
     #     line = line[0]
     #     vector = Vector((line[0], line[1]), (line[2], line[3]))
     #     vector.draw(frame, color=BLUE)
-
 
     rectangles = identifyContours(contours)
     gauntlet = Gauntlet(rectangles)
@@ -286,7 +291,7 @@ def getGauntlet(frame):
     gauntlet.getRefVector()
     gauntlet.enumerateRects()
 
-    return frame, gauntlet
+    return gauntlet
 
 def identifyContours(contours):
     rectangles = []
@@ -299,7 +304,7 @@ def identifyContours(contours):
             tapeObj = TapeRect(approxCnt)
             if all((
                 1.5 < tapeObj.aspectRatio < 3,
-                0.0006 < tapeObj.boundingBoxArea/IMGAREA < 0.0016,
+                0.002 < tapeObj.boundingBoxArea/IMGAREA < 0.006,
                 tapeObj.contourArea / tapeObj.boundingBoxArea > 0.8
             )):
                 rectangles.append(tapeObj)
