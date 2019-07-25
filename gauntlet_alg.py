@@ -239,8 +239,8 @@ class Gauntlet:
             if hasattr(rect, "number"):
                 cv2.putText(
                     frame,
-                    "{}".format(rect.number),
-                    #"{:.3}".format(rect.contourArea / IMGAREA),
+                    #"{}".format(rect.number),
+                    "{:.3}".format(rect.contourArea / IMGAREA),
                     (int(rect.center[0]), int(rect.center[1])),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.75, ORANGE, 2
