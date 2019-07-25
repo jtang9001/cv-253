@@ -30,6 +30,8 @@ def writeGauntletPos(gauntObj: Gauntlet):
 # allow the camera to warmup
 time.sleep(0.25)
 
+lastGoodGauntlet = None
+
 # capture frames from the camera
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     try:
@@ -40,6 +42,11 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         originalImage = frame.array
 
         processedImage, gauntletObj = getGauntlet(originalImage)
+        if len(gauntletObj.rects) == 6:
+            lastGoodGauntlet = gauntletObj
+        
+        if lastGoodGauntlet is not None:
+            lastGoodGauntlet.draw(processedImage)
         #writeGauntletPos(gauntletObj)
      
         # show the frame

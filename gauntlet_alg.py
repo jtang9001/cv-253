@@ -225,6 +225,31 @@ class Gauntlet:
                 if rect.number == number:
                     return rect
 
+    def draw(self, frame):
+        for rect in self.rects:
+            cv2.drawContours(frame, [rect.contour], -1, GREEN, 2)
+            rect.getIntrinsicVector()
+            #rect.vector.draw(frame)
+            rect.intrinsicVector.draw(frame, color = BLUE)
+            rect.intrinsicVector.drawEnd(frame)
+            # relCircleCenter = shiftImageCoords(frame, rect.intrinsicVector.end)
+
+            if hasattr(rect, "number"):
+                cv2.putText(
+                    frame,
+                    "{}".format(rect.number),
+                    (int(rect.center[0]), int(rect.center[1])),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.75, ORANGE, 2
+                )
+
+        # for circle in gauntlet.circles:
+        #     circle.draw(frame)
+
+        self.centerCircle.draw(frame)
+        cv2.circle(frame, (int(self.center[0]), int(self.center[1])), 3, RED, 2)
+        self.refVector.draw(frame, color = VIOLET)
+
 
 
 def getGauntlet(frame):
@@ -260,30 +285,6 @@ def getGauntlet(frame):
     gauntlet.assignRadialVectors()
     gauntlet.getRefVector()
     gauntlet.enumerateRects()
-
-    for rect in rectangles:
-        cv2.drawContours(frame, [rect.contour], -1, GREEN, 2)
-        rect.getIntrinsicVector()
-        #rect.vector.draw(frame)
-        rect.intrinsicVector.draw(frame, color = BLUE)
-        rect.intrinsicVector.drawEnd(frame)
-        # relCircleCenter = shiftImageCoords(frame, rect.intrinsicVector.end)
-
-        if hasattr(rect, "number"):
-            cv2.putText(
-                frame,
-                "{}".format(rect.number),
-                (int(rect.center[0]), int(rect.center[1])),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.75, ORANGE, 2
-            )
-
-    # for circle in gauntlet.circles:
-    #     circle.draw(frame)
-
-    gauntlet.centerCircle.draw(frame)
-    cv2.circle(frame, (int(gauntlet.center[0]), int(gauntlet.center[1])), 3, RED, 2)
-    gauntlet.refVector.draw(frame, color = VIOLET)
 
     return frame, gauntlet
 
