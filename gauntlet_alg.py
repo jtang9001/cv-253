@@ -291,7 +291,7 @@ def getGauntlet(frame):
     gauntlet.getRefVector()
     gauntlet.enumerateRects()
 
-    return gauntlet
+    return gauntlet, contours
 
 def identifyContours(contours):
     rectangles = []

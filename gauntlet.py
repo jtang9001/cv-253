@@ -4,7 +4,7 @@ from picamera import PiCamera
 import time
 import cv2
 import numpy as np
-from gauntlet_alg import getGauntlet, Gauntlet, preprocessFrame
+from gauntlet_alg import getGauntlet, Gauntlet, preprocessFrame, YELLOW
 import serial
 import time
 import traceback
@@ -37,17 +37,13 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     startTime = time.time()
     
     try:
-        
-        
         # grab the raw NumPy array representing the image, then initialize the timestamp
         # and occupied/unoccupied text
         originalImage = frame.array
         
         processedImage = preprocessFrame(originalImage)
 
-        gauntletObj = getGauntlet(processedImage)
-        
-        
+        gauntletObj, contours = getGauntlet(processedImage)
         
         if len(gauntletObj.rects) == 6:
             lastGoodGauntlet = gauntletObj
@@ -60,6 +56,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         processedImage = cv2.cvtColor(processedImage, cv2.COLOR_GRAY2BGR)
         if lastGoodGauntlet is not None:
             lastGoodGauntlet.draw(processedImage)
+            cv2.drawContours(frame, contours, -1, YELLOW, 2)
             
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
