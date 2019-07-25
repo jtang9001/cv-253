@@ -21,6 +21,7 @@ VIOLET = (255,0,255)
 BLACK = (0,0,0)
 WHITE = (255,255,255)
 GRAY = (127,127,127)
+ORANGE = (0,165,255)
 
 class Circle:
     def __init__(self,x,y,r):
@@ -55,9 +56,16 @@ class Vector:
         self.start = start
         self.end = end
         self.vector = [end[0] - start[0], start[1] - end[1]]
-        self.magnitude = (self.vector[0]**2 + self.vector[1]**2) ** 0.5
+        self.magnitude = dist(self.start, self.end)
         self.angle = np.arctan2(self.vector[1], self.vector[0])
 
+    def scale(self, scaleFactor):
+        self.magnitude *= scaleFactor
+        self.vector = [component * scaleFactor for component in self.vector]
+        self.end = (self.start[0] + self.vector[0], self.start[1] - self.vector[1])
+
+        
+    
     def draw(self, img, color = CYAN, thickness = 2):
         cv2.line(
             img, 
@@ -108,7 +116,8 @@ class TapeRect:
         assert hasattr(self, "vector")
         if abs(angleDiff(self.vector.angle, self.angle)) > pi/2:
             self.angle = (self.angle + pi) % (2*pi)
-        self.intrinsicVector = PolarVector(self.center, TAPE_TO_HOLE_RATIO*max(self.dims), self.angle)
+        self.intrinsicVector = PolarVector(self.center, max(self.dims), self.angle)
+        self.intrinsicVector.scale(TAPE_TO_HOLE_RATIO)
 
 class Gauntlet:
     def __init__(self, rectObjs):
@@ -118,16 +127,16 @@ class Gauntlet:
         self.rects = []
         
         for rect in rectObjs:
-            self.addTapeRect(rect)
+            self.addRect(rect)
 
-    def addTapeRect(self, tapeRect):
+    def addRect(self, tapeRect):
         #tapeRect.assignVector(Vector(self.rectMean, tapeRect.center))
         self.rects.append(tapeRect)
 
-    def enumerateTapeRects(self):
+    def enumerateRects(self):
         numRects = len(self.rects)
         if numRects == 0:
-            print("Warning: no rects found in enumerateTapeRects")
+            print("Warning: no rects found in enumerateRects")
             return
         elif numRects == 1:
             self.rects[0].assignNumber(0)
@@ -168,9 +177,47 @@ class Gauntlet:
 
         centerX = np.mean([circle.x for circle in self.circles])
         centerY = np.mean([circle.y for circle in self.circles])
-        avgR = np.mean([circle.r for circle in self.circles])
+        self.avgR = np.mean([circle.r for circle in self.circles])
         self.center = (centerX, centerY)
-        self.centerCircle = Circle(centerX, centerY, avgR)
+        self.centerCircle = Circle(centerX, centerY, self.avgR)
+
+        self.rects = [
+            rect for rect in self.rects \
+                if 0.75*self.avgR < dist(rect.center, self.center) < 1.25*self.avgR
+        ]
+
+    def assignRadialVectors(self):
+        assert hasattr(self, "center")
+        for rect in self.rects:
+            rect.assignVector(Vector(self.center, rect.center))
+
+    def getRefVector(self):
+        try:
+            leftmostRect = min(
+                self.rects, 
+                key = lambda rect: angleDiffCW(rect.vector.angle, -pi/2)
+            )
+            rightmostRect = min(
+                self.rects, 
+                key = lambda rect: -1 * angleDiffCCW(rect.vector.angle, -pi/2)
+            )
+
+            if abs(angleDiff(leftmostRect.vector.angle + pi, rightmostRect.vector.angle)) < pi/6:
+                leftmostRect.assignNumber(0)
+                if not hasattr(rightmostRect, "number"):
+                    rightmostRect.assignNumber(5)
+                self.refAngle = angleDiffCCW(rightmostRect.vector.angle, leftmostRect.vector.angle) / 2 + rightmostRect.vector.angle - pi/2
+            else:
+                if abs(angleDiff(leftmostRect.vector.angle, pi)) < abs(angleDiff(rightmostRect.vector.angle, 0)):
+                    self.refAngle = (leftmostRect.vector.angle - pi) % (2*pi)
+                else:
+                    self.refAngle = rightmostRect.vector.angle
+
+            self.refVector = PolarVector(self.center, self.avgR, self.refAngle)
+        
+        except AttributeError:
+            print("Attempted to generate ref vector without first assigning vectors to rects")
+
 
     def getRectByNum(self, number):
         for rect in self.rects:
@@ -185,7 +232,6 @@ def getGauntlet(frame):
 
     greyImg = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     blurredImg = cv2.GaussianBlur(greyImg, (5,5), 0)
-    #threshedImg = autoCanny(blurredImg)
     #threshedImg = cv2.threshold(blurredImg, BINARIZATION_THRESHOLD, 255, cv2.THRESH_BINARY)[1]
     threshedImg = cv2.adaptiveThreshold(blurredImg, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 101, 10)
     #note: last two arguments change the adaptive behavior of this threshold.
@@ -194,37 +240,50 @@ def getGauntlet(frame):
     #last argument can be thought of as exposure. it is a constant that is subtracted from
     #each pixel before deciding if it goes to black or white. higher values make the image
     #appear more bright/whiter/washed out.
+
+    # edgedImg = autoCanny(blurredImg)
     
-    frame = cv2.cvtColor(threshedImg, cv2.COLOR_GRAY2BGR)
+    frame = cv2.cvtColor(greyImg, cv2.COLOR_GRAY2BGR)
 
     contours = cv2.findContours(threshedImg, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
-    cv2.drawContours(frame, contours, -1, YELLOW, 2)
+    # cv2.drawContours(frame, contours, -1, YELLOW, 2)
+    # lines = cv2.HoughLinesP(edgedImg, 1, degToRad(1), 50, None, 50, 10)
+    # for line in lines:
+    #     line = line[0]
+    #     vector = Vector((line[0], line[1]), (line[2], line[3]))
+    #     vector.draw(frame, color=BLUE)
+
 
     rectangles = identifyContours(contours)
     gauntlet = Gauntlet(rectangles)
     gauntlet.encircleRects()
+    gauntlet.assignRadialVectors()
+    gauntlet.getRefVector()
+    gauntlet.enumerateRects()
 
     for rect in rectangles:
         cv2.drawContours(frame, [rect.contour], -1, GREEN, 2)
-        # rect.getIntrinsicVector()
-        # rect.vector.draw(frame)
-        # rect.intrinsicVector.draw(frame, color = BLUE)
-        # rect.intrinsicVector.drawEnd(frame)
+        rect.getIntrinsicVector()
+        #rect.vector.draw(frame)
+        rect.intrinsicVector.draw(frame, color = BLUE)
+        rect.intrinsicVector.drawEnd(frame)
         # relCircleCenter = shiftImageCoords(frame, rect.intrinsicVector.end)
 
-        # cv2.putText(
-        #     frame,
-        #     "{:.4}".format(rect.aspectRatio),
-        #     (int(rect.center[0]), int(rect.center[1])),
-        #     cv2.FONT_HERSHEY_SIMPLEX,
-        #     0.75, RED, 2
-        # )
+        if hasattr(rect, "number"):
+            cv2.putText(
+                frame,
+                "{}".format(rect.number),
+                (int(rect.center[0]), int(rect.center[1])),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.75, ORANGE, 2
+            )
 
     # for circle in gauntlet.circles:
     #     circle.draw(frame)
 
     gauntlet.centerCircle.draw(frame)
     cv2.circle(frame, (int(gauntlet.center[0]), int(gauntlet.center[1])), 3, RED, 2)
+    gauntlet.refVector.draw(frame, color = VIOLET)
 
     return frame, gauntlet
 
@@ -239,7 +298,7 @@ def identifyContours(contours):
             tapeObj = TapeRect(approxCnt)
             if all((
                 1.5 < tapeObj.aspectRatio < 3,
-                0.0006 < tapeObj.boundingBoxArea/IMGAREA < 0.0015,
+                0.0006 < tapeObj.boundingBoxArea/IMGAREA < 0.0016,
                 tapeObj.contourArea / tapeObj.boundingBoxArea > 0.8
             )):
                 rectangles.append(tapeObj)
