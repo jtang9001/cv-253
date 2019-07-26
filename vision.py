@@ -46,6 +46,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         originalImage = frame.array
         
         processedImage, dispImage = alg.preprocessFrame(originalImage)
+        undistortTime = time.time()
 
         resRect = alg.findTemplate(processedImage, TEMPLATE)
         resRect.draw(dispImage)
@@ -76,4 +77,8 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             break
         
     endTime = time.time()
-    print("FPS: {:.2f}".format(1/(endTime - startTime)))
+    totalTime = endTime - startTime
+    pctUndistorting = (undistortTime - startTime) / totalTime * 100
+    print("FPS: {:.2f}, {.2f}% spent undistorting".format(
+        1/(endTime - startTime), pctUndistorting
+    ))
