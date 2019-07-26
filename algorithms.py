@@ -33,6 +33,18 @@ class Rectangle:
     def draw(self, img):
         cv2.drawContours(img, [self.contour], -1, GREEN, 2)
 
+class ResultRect(Rectangle):
+    def __init__(self, center, dims, angle, metric):
+        self.metric = metric
+        super().__init__(center, dims, angle)
+    
+    def draw(self, img):
+        cv2.drawContours(img, [self.contour], -1, GREEN, 2)
+        cv2.putText(
+            img, "{:.2f}".format(self.metric), 
+            self.center, cv2.FONT_HERSHEY_SIMPLEX, 0.75, ORANGE, 1
+        )
+
 class Circle:
     def __init__(self,x,y,r):
         self.x = x
@@ -317,7 +329,7 @@ def findTemplate(img, template):
     minVal, maxVal, minCoord, maxCoord = cv2.minMaxLoc(convResult)
 
     #cv2.rectangle(img, maxCoord, (maxCoord[0] + w, maxCoord[1] + h), 127, 2)
-    resRect = Rectangle((maxCoord[0] + w//2, maxCoord[1] + h//2), (w,h), 0)
+    resRect = ResultRect((maxCoord[0] + w//2, maxCoord[1] + h//2), (w,h), 0, maxVal)
     return resRect
 
 def getGauntlet(frame):
