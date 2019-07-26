@@ -4,17 +4,13 @@ from picamera import PiCamera
 import time
 import cv2
 import numpy as np
-import gauntlet_alg as alg
-import wiringpi
+import algorithms as alg
 import serial
 import time
 import traceback
  
 # initialize the camera and grab a reference to the raw camera capture
 res = (640,480)
-
-wiringpi.wiringPiSetup()
-#ser = wiringpi.serialOpen("/dev/ttyAMA0", 9600)
 
 ser = serial.Serial(
     port = "/dev/ttyS0",
@@ -33,7 +29,6 @@ def writeGauntletPos(img, gauntObj: alg.Gauntlet):
     dataStr += "\n"
     print(dataStr)
     ser.write(dataStr.encode("ascii", "ignore"))
-    #wiringpi.serialPuts(ser, dataStr.encode("ascii", "ignore"))
     
 # allow the camera to warmup
 time.sleep(0.25)
