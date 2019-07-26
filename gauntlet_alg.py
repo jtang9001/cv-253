@@ -181,7 +181,6 @@ class Gauntlet:
         self.avgR = np.mean([circle.r for circle in self.circles])
         self.center = (centerX, centerY)
         self.centerCircle = Circle(centerX, centerY, self.avgR)
-        print(self.avgR)
 
         self.rects = [
             rect for rect in self.rects \
@@ -230,7 +229,6 @@ class Gauntlet:
     def draw(self, frame):
         for rect in self.rects:
             cv2.drawContours(frame, [rect.contour], -1, GREEN, 2)
-            rect.getIntrinsicVector()
             #rect.vector.draw(frame)
             rect.intrinsicVector.draw(frame, color = BLUE)
             rect.intrinsicVector.drawEnd(frame)
@@ -240,7 +238,8 @@ class Gauntlet:
                 cv2.putText(
                     frame,
                     #"{}".format(rect.number),
-                    "{:.3}".format(rect.contourArea / IMGAREA),
+                    #"{:.3}".format(rect.contourArea / IMGAREA),
+                    "{},{}".format(*shiftImageCoords(frame, rect.intrinsicVector.end)),
                     (int(rect.center[0]), int(rect.center[1])),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.75, ORANGE, 2
@@ -290,6 +289,8 @@ def getGauntlet(frame):
     gauntlet.assignRadialVectors()
     gauntlet.getRefVector()
     gauntlet.enumerateRects()
+    for rect in gauntlet.rects:
+        rect.getIntrinsicVector()
 
     return gauntlet, contours
 
@@ -317,6 +318,14 @@ def identifyContours(contours):
         )
 
     return rectangles
+
+
+
+def shiftImageCoords(img, coord):
+    imgWidth = img.shape[1]
+    imgHeight = img.shape[0]
+    return (int(round(coord[0] - imgWidth/2)), int(round(imgHeight/2 - coord[1])))
+
 
 def autoCanny(image, sigma=0.33):
     # compute the median of the single channel pixel intensities
@@ -356,10 +365,6 @@ def angleDiffCW(fromAngle, toAngle):
 def degToRad(degrees):
     return degrees * pi / 180
 
-def shiftImageCoords(img, coord):
-    imgWidth = img.shape[1]
-    imgHeight = img.shape[0]
-    return (round(coord[0] - imgWidth/2), round(imgHeight/2 - coord[1]))
 
 def dist(a, b):
     return ((a[0]-b[0])**2 + (a[1]-b[1])**2)**0.5

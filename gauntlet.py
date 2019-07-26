@@ -4,7 +4,8 @@ from picamera import PiCamera
 import time
 import cv2
 import numpy as np
-from gauntlet_alg import getGauntlet, Gauntlet, preprocessFrame, YELLOW
+import gauntlet_alg as alg
+import wiringpi
 import serial
 import time
 import traceback
@@ -12,21 +13,28 @@ import traceback
 # initialize the camera and grab a reference to the raw camera capture
 res = (640,480)
 
+wiringpi.wiringPiSetup()
+#ser = wiringpi.serialOpen("/dev/ttyAMA0", 9600)
+
 ser = serial.Serial(
-    port = "/dev/ttyAMA0",
+    port = "/dev/ttyS0",
+    baudrate = 9600,
     timeout = 1.0
 )
 
 camera = PiCamera(resolution=res, framerate=20)
 rawCapture = PiRGBArray(camera, size=res)
 
-def writeGauntletPos(gauntObj: Gauntlet):
+def writeGauntletPos(img, gauntObj: alg.Gauntlet):
     dataStr = "G"
     for rect in gauntObj.rects:
-        dataStr += "{},{};".format(rect.intrinsicVector.end[0], rect.intrinsicVector.end[1])
+        coords = alg.shiftImageCoords(img, rect.intrinsicVector.end)
+        dataStr += "{},{};".format(*coords)
     dataStr += "\n"
-    ser.write(dataStr)
-
+    print(dataStr)
+    ser.write(dataStr.encode("ascii", "ignore"))
+    #wiringpi.serialPuts(ser, dataStr.encode("ascii", "ignore"))
+    
 # allow the camera to warmup
 time.sleep(0.25)
 
@@ -41,22 +49,21 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         # and occupied/unoccupied text
         originalImage = frame.array
         
-        processedImage = preprocessFrame(originalImage)
+        processedImage = alg.preprocessFrame(originalImage)
 
-        gauntletObj, contours = getGauntlet(processedImage)
+        gauntletObj, contours = alg.getGauntlet(processedImage)
         
         if len(gauntletObj.rects) == 6:
             lastGoodGauntlet = gauntletObj
-        
-        
-        #writeGauntletPos(gauntletObj)
+            writeGauntletPos(processedImage, gauntletObj)
+            
     except Exception:
         traceback.print_exc()
     finally:
         processedImage = cv2.cvtColor(processedImage, cv2.COLOR_GRAY2BGR)
         if lastGoodGauntlet is not None:
             lastGoodGauntlet.draw(processedImage)
-            cv2.drawContours(frame, contours, -1, YELLOW, 2)
+            #cv2.drawContours(processedImage, contours, -1, alg.YELLOW, 2)
             
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
@@ -70,4 +77,4 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             break
         
     endTime = time.time()
-    print("FPS: {:.2f}".format(1/(endTime - startTime)))
+    #print("FPS: {:.2f}".format(1/(endTime - startTime)))
