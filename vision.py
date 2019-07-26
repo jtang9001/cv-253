@@ -34,6 +34,7 @@ def writeGauntletPos(img, gauntObj: alg.Gauntlet):
 time.sleep(0.25)
 
 lastGoodGauntlet = None
+TEMPLATE = cv2.imread("template.png")
 
 # capture frames from the camera
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
@@ -46,19 +47,22 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         
         processedImage, dispImage = alg.preprocessFrame(originalImage)
 
-        gauntletObj, contours = alg.getGauntlet(processedImage)
+        resRect = alg.findTemplate(processedImage, TEMPLATE)
+        resRect.draw(dispImage)
+
+        # gauntletObj, contours = alg.getGauntlet(processedImage)
         
-        if len(gauntletObj.rects) == 6:
-            lastGoodGauntlet = gauntletObj
-            writeGauntletPos(processedImage, gauntletObj)
+        # if len(gauntletObj.rects) == 6:
+        #     lastGoodGauntlet = gauntletObj
+        #     writeGauntletPos(processedImage, gauntletObj)
             
     except Exception:
         traceback.print_exc()
     finally:
-        dispImage = cv2.cvtColor(dispImage, cv2.COLOR_GRAY2BGR)
-        if lastGoodGauntlet is not None:
-            lastGoodGauntlet.draw(dispImage)
-            cv2.drawContours(dispImage, contours, -1, alg.YELLOW, 2)
+        # dispImage = cv2.cvtColor(dispImage, cv2.COLOR_GRAY2BGR)
+        # if lastGoodGauntlet is not None:
+        #     lastGoodGauntlet.draw(dispImage)
+        #     cv2.drawContours(dispImage, contours, -1, alg.YELLOW, 2)
             
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
@@ -72,4 +76,4 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             break
         
     endTime = time.time()
-    #print("FPS: {:.2f}".format(1/(endTime - startTime)))
+    print("FPS: {:.2f}".format(1/(endTime - startTime)))

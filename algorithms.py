@@ -4,7 +4,7 @@ import imutils
 import itertools
 from math import pi
 
-IMGWIDTH = 480
+IMGWIDTH = 640
 TAPE_TO_HOLE_RATIO = 1.35
 BINARIZATION_THRESHOLD = 80
 POLY_APPROX_COEFF = 0.05
@@ -23,15 +23,15 @@ WHITE = (255,255,255)
 GRAY = (127,127,127)
 ORANGE = (0,165,255)
 
-FISHEYE_CORR_MTX = np.array([[2.76312414e+03, 0.00000000e+00, 1.19515888e+03],
- [0.00000000e+00, 2.75781534e+03, 9.22732865e+02],
- [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
+class Rectangle:
+    def __init__(self, center, dims, angle):
+        self.center = center
+        self.dims = dims
+        self.angle = angle
+        self.contour = np.int0(cv2.boxPoints((center, dims, angle)))
 
-FISHEYE_CORR_COEFFS = np.array([-1.60910753e+00, 3.04745945e+00, 7.74355069e-04, -1.10231481e-03, -2.87241705e+00])
-
-FISHEYE_GEN_MTX, CORR_IMG_RECT = cv2.getOptimalNewCameraMatrix(FISHEYE_CORR_MTX, FISHEYE_CORR_COEFFS, IMGRES, 0)
-
-
+    def draw(self, img):
+        cv2.drawContours(img, [self.contour], -1, GREEN, 2)
 
 class Circle:
     def __init__(self,x,y,r):
@@ -283,17 +283,15 @@ def preprocessFrame(frame):
 
     # edgedImg = autoCanny(blurredImg)
     
-    #frame = cv2.cvtColor(threshedImg, cv2.COLOR_GRAY2BGR)
-    return threshedImg, threshedImg
+    frame = cv2.cvtColor(greyImg, cv2.COLOR_GRAY2BGR)
+    return threshedImg, frame
 
-# You should replace these 3 lines with the output in calibration step
 #DIM=(2592, 1944)
 #K=np.array([[90510.3736296528, 0.0, 1198.8033201561661], [0.0, 90208.86781844526, 923.4840835756314], [0.0, 0.0, 1.0]])
 #D=np.array([[-1510.2578641109285], [1821741.8099077642], [-1394482337.1053123], [477471975210.25684]])
 DIM=(2592, 1944)
 K=np.array([[1269.7500654953033, 0.0, 1188.300163188966], [0.0, 1267.444016376746, 925.9519344952482], [0.0, 0.0, 1.0]])
 D=np.array([[-0.029225632583395427], [-0.031476036031717884], [0.03403889451220812], [-0.01493718467056338]])
-
 
 def undistort(img, balance=0.25, dim2=IMGRES, dim3=IMGRES):
     dim1 = img.shape[:2][::-1]  #dim1 is the dimension of input image to un-distort
@@ -310,6 +308,17 @@ def undistort(img, balance=0.25, dim2=IMGRES, dim3=IMGRES):
     undistorted_img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
     
     return undistorted_img
+
+def findTemplate(img, template):
+    template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    w = template.shape[1]
+    h = template.shape[0]
+    convResult = cv2.matchTemplate(img, template, cv2.TM_CCOEFF)
+    minVal, maxVal, minCoord, maxCoord = cv2.minMaxLoc(convResult)
+
+    #cv2.rectangle(img, maxCoord, (maxCoord[0] + w, maxCoord[1] + h), 127, 2)
+    resRect = Rectangle((maxCoord[0] + w//2, maxCoord[1] + h//2), (w,h), 0)
+    return resRect
 
 def getGauntlet(frame):
     contours = cv2.findContours(frame, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
@@ -407,15 +416,27 @@ def dist(a, b):
     return ((a[0]-b[0])**2 + (a[1]-b[1])**2)**0.5
 
 if __name__ == "__main__":
-    import glob
-    import traceback
 
-    for img in glob.glob("batch 3 photos/*.jpg"):
-        try:
-            originalImg = cv2.imread(img)
-            resizedImg = imutils.resize(originalImg, width=IMGWIDTH)
+    originalImg = cv2.imread("gauntlet.jpg")
+    template = cv2.imread("template.png")
+    resizedImg = imutils.resize(originalImg, width=IMGWIDTH)
+    searchImg, dispImg = preprocessFrame(resizedImg)
+    resRect = findTemplate(searchImg, template)
+    resRect.draw(dispImg)
+    
+    cv2.imshow("Frame", dispImg)
+    cv2.waitKey(0)
 
-            cv2.imshow("Frame", getGauntlet(resizedImg)[0])
-            cv2.waitKey(0)
-        except Exception:
-            traceback.print_exc()
+    # import glob
+    # import traceback
+
+    # for img in glob.glob("batch 3 photos/*.jpg"):
+    #     try:
+    #         #originalImg = cv2.imread(img)
+    #         originalImg = cv2.imread("gauntlet.jpg")
+    #         resizedImg = imutils.resize(originalImg, width=IMGWIDTH)
+
+    #         cv2.imshow("Frame", getGauntlet(resizedImg)[0])
+    #         cv2.waitKey(0)
+    #     except Exception:
+    #         traceback.print_exc()
