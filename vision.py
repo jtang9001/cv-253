@@ -44,7 +44,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         # and occupied/unoccupied text
         originalImage = frame.array
         
-        processedImage = alg.preprocessFrame(originalImage)
+        processedImage, dispImage = alg.preprocessFrame(originalImage)
 
         gauntletObj, contours = alg.getGauntlet(processedImage)
         
@@ -55,16 +55,16 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     except Exception:
         traceback.print_exc()
     finally:
-        processedImage = cv2.cvtColor(processedImage, cv2.COLOR_GRAY2BGR)
+        dispImage = cv2.cvtColor(dispImage, cv2.COLOR_GRAY2BGR)
         if lastGoodGauntlet is not None:
-            lastGoodGauntlet.draw(processedImage)
+            lastGoodGauntlet.draw(dispImage)
             #cv2.drawContours(processedImage, contours, -1, alg.YELLOW, 2)
             
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
         
         # show the frame
-        cv2.imshow("Frame", processedImage)
+        cv2.imshow("Frame", dispImage)
         key = cv2.waitKey(1) & 0xFF
      
         # if the `q` key was pressed, break from the loop
