@@ -248,8 +248,8 @@ class Gauntlet:
                 cv2.putText(
                     frame,
                     #"{}".format(rect.number),
-                    #"{:.3}".format(rect.contourArea / IMGAREA),
-                    "{},{}".format(*shiftImageCoords(frame, rect.intrinsicVector.end)),
+                    "{:.3}".format(rect.contourArea / IMGAREA),
+                    #"{},{}".format(*shiftImageCoords(frame, rect.intrinsicVector.end)),
                     (int(rect.center[0]), int(rect.center[1])),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.75, ORANGE, 2
@@ -284,7 +284,7 @@ def preprocessFrame(frame):
     # edgedImg = autoCanny(blurredImg)
     
     #frame = cv2.cvtColor(threshedImg, cv2.COLOR_GRAY2BGR)
-    return threshedImg, greyImg
+    return threshedImg, threshedImg
 
 # You should replace these 3 lines with the output in calibration step
 #DIM=(2592, 1944)
@@ -342,7 +342,7 @@ def identifyContours(contours):
             tapeObj = TapeRect(approxCnt)
             if all((
                 1.5 < tapeObj.aspectRatio < 3,
-                0.002 < tapeObj.boundingBoxArea/IMGAREA < 0.006,
+                0.0004 < tapeObj.boundingBoxArea/IMGAREA < 0.001,
                 tapeObj.contourArea / tapeObj.boundingBoxArea > 0.8
             )):
                 rectangles.append(tapeObj)

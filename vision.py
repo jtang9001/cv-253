@@ -58,7 +58,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         dispImage = cv2.cvtColor(dispImage, cv2.COLOR_GRAY2BGR)
         if lastGoodGauntlet is not None:
             lastGoodGauntlet.draw(dispImage)
-            #cv2.drawContours(processedImage, contours, -1, alg.YELLOW, 2)
+            cv2.drawContours(dispImage, contours, -1, alg.YELLOW, 2)
             
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
