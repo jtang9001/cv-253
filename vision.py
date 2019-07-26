@@ -79,6 +79,6 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     endTime = time.time()
     totalTime = endTime - startTime
     pctUndistorting = (undistortTime - startTime) / totalTime * 100
-    print("FPS: {:.2f}, {.2f}% spent undistorting".format(
+    print("FPS: {:.2f}, {:.2f}% spent undistorting".format(
         1/(endTime - startTime), pctUndistorting
     ))

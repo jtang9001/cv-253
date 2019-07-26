@@ -305,18 +305,23 @@ DIM=(2592, 1944)
 K=np.array([[1269.7500654953033, 0.0, 1188.300163188966], [0.0, 1267.444016376746, 925.9519344952482], [0.0, 0.0, 1.0]])
 D=np.array([[-0.029225632583395427], [-0.031476036031717884], [0.03403889451220812], [-0.01493718467056338]])
 
-def undistort(img, balance=0.25, dim2=IMGRES, dim3=IMGRES):
-    dim1 = img.shape[:2][::-1]  #dim1 is the dimension of input image to un-distort
-    assert dim1[0]/dim1[1] == DIM[0]/DIM[1], "Image to undistort needs to have same aspect ratio as the ones used in calibration"
-    if not dim2:
-        dim2 = dim1
-    if not dim3:
-        dim3 = dim1
-    scaled_K = K * dim1[0] / DIM[0]  # The values of K is to scale with image dimension.
-    scaled_K[2][2] = 1.0  # Except that K[2][2] is always 1.0
-    # This is how scaled_K, dim2 and balance are used to determine the final K used to un-distort image. OpenCV document failed to make this clear!
-    new_K = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(scaled_K, D, dim2, np.eye(3), balance=balance)
-    map1, map2 = cv2.fisheye.initUndistortRectifyMap(scaled_K, D, np.eye(3), new_K, dim3, cv2.CV_16SC2)
+balance=0.25
+dim2=IMGRES
+dim3=IMGRES
+
+dim1 = IMGRES  #dim1 is the dimension of input image to un-distort
+assert dim1[0]/dim1[1] == DIM[0]/DIM[1], "Image to undistort needs to have same aspect ratio as the ones used in calibration"
+if not dim2:
+    dim2 = dim1
+if not dim3:
+    dim3 = dim1
+scaled_K = K * dim1[0] / DIM[0]  # The values of K is to scale with image dimension.
+scaled_K[2][2] = 1.0  # Except that K[2][2] is always 1.0
+# This is how scaled_K, dim2 and balance are used to determine the final K used to un-distort image. OpenCV document failed to make this clear!
+new_K = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(scaled_K, D, dim2, np.eye(3), balance=balance)
+map1, map2 = cv2.fisheye.initUndistortRectifyMap(scaled_K, D, np.eye(3), new_K, dim3, cv2.CV_16SC2)
+
+def undistort(img):
     undistorted_img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
     
     return undistorted_img
@@ -325,11 +330,11 @@ def findTemplate(img, template):
     template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
     w = template.shape[1]
     h = template.shape[0]
-    convResult = cv2.matchTemplate(img, template, cv2.TM_CCOEFF)
+    convResult = cv2.matchTemplate(img, template, cv2.TM_SQDIFF)
     minVal, maxVal, minCoord, maxCoord = cv2.minMaxLoc(convResult)
 
     #cv2.rectangle(img, maxCoord, (maxCoord[0] + w, maxCoord[1] + h), 127, 2)
-    resRect = ResultRect((maxCoord[0] + w//2, maxCoord[1] + h//2), (w,h), 0, maxVal)
+    resRect = ResultRect((minCoord[0] + w//2, minCoord[1] + h//2), (w,h), 0, minVal)
     return resRect
 
 def getGauntlet(frame):
