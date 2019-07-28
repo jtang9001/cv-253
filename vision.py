@@ -21,14 +21,16 @@ ser = serial.Serial(
 camera = PiCamera(resolution=res, framerate=20)
 rawCapture = PiRGBArray(camera, size=res)
 
-def writeGauntletPos(img, gauntObj: alg.Gauntlet):
-    dataStr = "G"
-    for rect in gauntObj.rects:
-        coords = alg.shiftImageCoords(img, rect.intrinsicVector.end)
-        dataStr += "{},{};".format(*coords)
-    dataStr += "\n"
-    print(dataStr)
-    ser.write(dataStr.encode("ascii", "ignore"))
+#def writeGauntletPos(img, gauntObj: alg.Gauntlet):
+#    dataStr = "G"
+#    for rect in gauntObj.rects:
+#        coords = alg.shiftImageCoords(img, rect.intrinsicVector.end)
+#        dataStr += "{},{};".format(*coords)
+#    dataStr += "\n"
+#    print(dataStr)
+#    ser.write(dataStr.encode("ascii", "ignore"))
+    
+
     
 # allow the camera to warmup
 time.sleep(0.25)
@@ -58,7 +60,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         if gauntletObj is not None:
             if len(gauntletObj.rects) == 6:
                 lastGoodGauntlet = gauntletObj
-                writeGauntletPos(processedImage, gauntletObj)
+                gauntletObj.serialWrite(processedImage, ser)
             circles = None
         else:
             dispImage = alg.undistortPerspective(houghImage)
@@ -75,8 +77,9 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             #cv2.drawContours(dispImage, contours, -1, alg.VIOLET, 2)
 
         if circles is not None:
-            for circle in circles:
-                circle.draw(dispImage)
+            circles[0].draw(dispImage)
+            circles[0].serialWrite(houghImage, ser)
+            
             
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)

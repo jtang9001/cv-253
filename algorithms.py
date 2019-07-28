@@ -58,6 +58,14 @@ class Circle:
             ( int(round(self.x)), int(round(self.y)) ), 
             int(round(self.r)), 
             color, thickness)
+        
+    def serialWrite(self, img, serialObject):
+        coords = shiftImageCoords(img, self.center)
+        dataStr = "P{},{};\n".format(*coords)
+        print(dataStr)
+        serialObject.write(dataStr.encode("ascii", "ignore"))
+        
+    
 
 class ThreePointCircle(Circle):
     def __init__(self,a,b,c):
@@ -281,6 +289,15 @@ class Gauntlet:
         
         if hasattr(self, "refVector"):
             self.refVector.draw(frame, color = VIOLET)
+            
+    def serialWrite(self, img, serialObject):
+        dataStr = "G"
+        for rect in self.rects:
+            coords = shiftImageCoords(img, rect.intrinsicVector.end)
+            dataStr += "{},{};".format(*coords)
+        dataStr += "\n"
+        print(dataStr)
+        serialObject.write(dataStr.encode("ascii", "ignore"))
 
 def preprocessFrame(frame):
     #assumes frame is an opencv image object
