@@ -34,6 +34,7 @@ def writeGauntletPos(img, gauntObj: alg.Gauntlet):
 time.sleep(0.25)
 
 lastGoodGauntlet = None
+circles = None
 TEMPLATE = cv2.imread("template.png")
 TEMPLATE = cv2.cvtColor(TEMPLATE, cv2.COLOR_BGR2GRAY)
 
@@ -46,26 +47,36 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         # and occupied/unoccupied text
         originalImage = frame.array
         
-        processedImage, dispImage = alg.preprocessFrame(originalImage)
-        undistortTime = time.time()
+        processedImage, houghImage, dispImage = alg.preprocessFrame(originalImage)
+        preprocessTime = time.time()
 
         # resRect = alg.findTemplate(processedImage, TEMPLATE)
         # resRect.draw(dispImage)
 
         gauntletObj, contours = alg.getGauntlet(processedImage)
         
-        if len(gauntletObj.rects) == 6:
-            lastGoodGauntlet = gauntletObj
-        if len(gauntletObj.rects) == 6:
-            writeGauntletPos(processedImage, gauntletObj)
+        if gauntletObj is not None:
+            if len(gauntletObj.rects) == 6:
+                lastGoodGauntlet = gauntletObj
+                writeGauntletPos(processedImage, gauntletObj)
+            circles = None
+        else:
+            dispImage = alg.undistortPerspective(houghImage)
+            circles = alg.findCircles(dispImage)
+
+            
             
     except Exception:
         traceback.print_exc()
     finally:
         # dispImage = cv2.cvtColor(dispImage, cv2.COLOR_GRAY2BGR)
-        if lastGoodGauntlet is not None:
+        if lastGoodGauntlet is not None and circles is None:
             lastGoodGauntlet.draw(dispImage)
             #cv2.drawContours(dispImage, contours, -1, alg.VIOLET, 2)
+
+        if circles is not None:
+            for circle in circles:
+                circle.draw(dispImage)
             
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
@@ -80,7 +91,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         
     endTime = time.time()
     totalTime = endTime - startTime
-    pctUndistorting = (undistortTime - startTime) / totalTime * 100
+    pctUndistorting = (preprocessTime - startTime) / totalTime * 100
     print("FPS: {:.2f}, {:.2f}% spent undistorting".format(
         1/(endTime - startTime), pctUndistorting
     ))

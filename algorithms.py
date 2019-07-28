@@ -301,7 +301,29 @@ def preprocessFrame(frame):
     #edgedImg = autoCanny(blurredImg)
     
     frame = cv2.cvtColor(greyImg, cv2.COLOR_GRAY2BGR)
-    return threshedImg, frame
+    return threshedImg, blurredImg, frame
+
+def findCircles(img):
+    circles = []
+    houghResults = cv2.HoughCircles(
+        img, cv2.HOUGH_GRADIENT, 1.5, 100,
+        param1 = autoCannyUpper(img),
+
+    )
+    if houghResults is not None:
+        print(houghResults)
+        for (x,y,r) in houghResults[0,:]:
+            if r == 0:
+                continue
+            circles.append(Circle(x,y,r))
+    else:
+        print("No circles found")
+        return None
+
+    if len(circles) == 0:
+        return None
+
+    return circles
 
 #DIM=(2592, 1944)
 #K=np.array([[90510.3736296528, 0.0, 1198.8033201561661], [0.0, 90208.86781844526, 923.4840835756314], [0.0, 0.0, 1.0]])
@@ -326,10 +348,18 @@ scaled_K[2][2] = 1.0  # Except that K[2][2] is always 1.0
 new_K = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(scaled_K, D, dim2, np.eye(3), balance=balance)
 map1, map2 = cv2.fisheye.initUndistortRectifyMap(scaled_K, D, np.eye(3), new_K, dim3, cv2.CV_16SC2)
 
-def undistort(img):
+def undistortFisheye(img):
     undistorted_img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
     
     return undistorted_img
+    
+persMtx = cv2.getPerspectiveTransform(
+    np.float32([ [140, 180], [500, 180], [0, 480], [640, 480] ]),
+    np.float32([ [0, 0], [640, 0], [0, 480], [640, 480] ])
+)
+def undistortPerspective(img):
+    return cv2.warpPerspective(img, persMtx, IMGRES)
+
 
 def findTemplate(img, template):
     w = template.shape[1]
@@ -343,23 +373,28 @@ def findTemplate(img, template):
 
 def getGauntlet(frame):
     contours = cv2.findContours(frame, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
-    # cv2.drawContours(frame, contours, -1, YELLOW, 2)
-    # lines = cv2.HoughLinesP(edgedImg, 1, degToRad(1), 50, None, 50, 10)
-    # for line in lines:
-    #     line = line[0]
-    #     vector = Vector((line[0], line[1]), (line[2], line[3]))
-    #     vector.draw(frame, color=BLUE)
+    try:
+        
+        # cv2.drawContours(frame, contours, -1, YELLOW, 2)
+        # lines = cv2.HoughLinesP(edgedImg, 1, degToRad(1), 50, None, 50, 10)
+        # for line in lines:
+        #     line = line[0]
+        #     vector = Vector((line[0], line[1]), (line[2], line[3]))
+        #     vector.draw(frame, color=BLUE)
 
-    rectangles = identifyContours(contours)
-    gauntlet = Gauntlet(rectangles)
-    gauntlet.encircleRects()
-    gauntlet.assignRadialVectors()
-    gauntlet.getRefVector()
-    gauntlet.enumerateRects()
-    for rect in gauntlet.rects:
-        rect.getIntrinsicVector()
+        rectangles = identifyContours(contours)
+        gauntlet = Gauntlet(rectangles)
+        gauntlet.encircleRects()
+        gauntlet.assignRadialVectors()
+        gauntlet.getRefVector()
+        gauntlet.enumerateRects()
+        for rect in gauntlet.rects:
+            rect.getIntrinsicVector()
 
-    return gauntlet, [rect.contour for rect in rectangles]
+        return gauntlet, [rect.contour for rect in rectangles]
+    except Exception:
+        print("Could not find gauntlet.")
+        return None, contours
 
 def identifyContours(contours):
     rectangles = []
@@ -394,7 +429,7 @@ def shiftImageCoords(img, coord):
     return (int(round(coord[0] - imgWidth/2)), int(round(imgHeight/2 - coord[1])))
 
 
-def autoCanny(image, sigma=0.33):
+def autoCanny(image, sigma=0.333):
     # compute the median of the single channel pixel intensities
     v = np.median(image)
  
@@ -405,6 +440,13 @@ def autoCanny(image, sigma=0.33):
  
     # return the edged image
     return edged
+
+def autoCannyUpper(image, sigma = 0.333):
+    # compute the median of the single channel pixel intensities
+    v = np.median(image)
+ 
+    # apply automatic Canny edge detection using the computed median
+    return int(min(255, (1.0 + sigma) * v))
 
 def angleDiff(fromAngle, toAngle):
     return min(
