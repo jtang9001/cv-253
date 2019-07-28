@@ -189,13 +189,13 @@ class Gauntlet:
         for comb in itertools.combinations(self.rects, 3):
             centers = tuple(rect.center for rect in comb)
             circle = ThreePointCircle(*centers)
-            if 80 < circle.r < 120:
+            if 30 < circle.r < 60:
                 self.circles.append(circle)
 
         smallestCircle = min(self.circles, key = lambda circle: circle.r)
         self.circles = [
             circle for circle in self.circles \
-                if dist(circle.center, smallestCircle.center) < 0.1*IMGWIDTH
+                if dist(circle.center, smallestCircle.center) < 0.15*IMGWIDTH
             ]
 
         centerX = np.mean([circle.x for circle in self.circles])
@@ -259,12 +259,12 @@ class Gauntlet:
             if hasattr(rect, "number"):
                 cv2.putText(
                     frame,
-                    #"{}".format(rect.number),
-                    "{:.3}".format(rect.contourArea / IMGAREA),
+                    "{}".format(rect.number),
+                    #"{:.3}".format(rect.contourArea / IMGAREA),
                     #"{},{}".format(*shiftImageCoords(frame, rect.intrinsicVector.end)),
                     (int(rect.center[0]), int(rect.center[1])),
                     cv2.FONT_HERSHEY_SIMPLEX,
-                    0.75, ORANGE, 2
+                    0.75, ORANGE, 1
                 )
 
         # for circle in gauntlet.circles:
@@ -272,7 +272,12 @@ class Gauntlet:
 
         if hasattr(self, "center"):
             self.centerCircle.draw(frame)
-            cv2.circle(frame, (int(self.center[0]), int(self.center[1])), 3, RED, 2)
+            #cv2.circle(frame, (int(self.center[0]), int(self.center[1])), 3, RED, 2)
+            cv2.putText(
+                frame,
+                "{:.2f}".format(self.centerCircle.r),
+                (0,100),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.75, ORANGE, 1)
         
         if hasattr(self, "refVector"):
             self.refVector.draw(frame, color = VIOLET)
@@ -295,7 +300,7 @@ def preprocessFrame(frame):
 
     # edgedImg = autoCanny(blurredImg)
     
-    frame = cv2.cvtColor(greyImg, cv2.COLOR_GRAY2BGR)
+    frame = cv2.cvtColor(blurredImg, cv2.COLOR_GRAY2BGR)
     return threshedImg, frame
 
 #DIM=(2592, 1944)
@@ -364,12 +369,12 @@ def identifyContours(contours):
         perimeter = cv2.arcLength(contour, True)
 
         approxCnt = cv2.approxPolyDP(contour, POLY_APPROX_COEFF*perimeter, True)
-        if len(approxCnt) == 4:
+        if len(approxCnt) >= 4:
             tapeObj = TapeRect(approxCnt)
             if all((
                 1.5 < tapeObj.aspectRatio < 3,
-                0.0004 < tapeObj.boundingBoxArea/IMGAREA < 0.001,
-                tapeObj.contourArea / tapeObj.boundingBoxArea > 0.8
+                0.0002 < tapeObj.boundingBoxArea/IMGAREA < 0.001,
+                tapeObj.contourArea / tapeObj.boundingBoxArea > 0.5
             )):
                 rectangles.append(tapeObj)
 
