@@ -35,6 +35,7 @@ time.sleep(0.25)
 
 lastGoodGauntlet = None
 TEMPLATE = cv2.imread("template.png")
+TEMPLATE = cv2.cvtColor(TEMPLATE, cv2.COLOR_BGR2GRAY)
 
 # capture frames from the camera
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
@@ -53,8 +54,9 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 
         gauntletObj, contours = alg.getGauntlet(processedImage)
         
-        if len(gauntletObj.rects) >= 3:
+        if len(gauntletObj.rects) == 6:
             lastGoodGauntlet = gauntletObj
+        if len(gauntletObj.rects) == 6:
             writeGauntletPos(processedImage, gauntletObj)
             
     except Exception:
@@ -63,7 +65,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         # dispImage = cv2.cvtColor(dispImage, cv2.COLOR_GRAY2BGR)
         if lastGoodGauntlet is not None:
             lastGoodGauntlet.draw(dispImage)
-            cv2.drawContours(dispImage, contours, -1, alg.YELLOW, 2)
+            #cv2.drawContours(dispImage, contours, -1, alg.VIOLET, 2)
             
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)

@@ -4,11 +4,11 @@ import imutils
 import itertools
 from math import pi
 
-IMGWIDTH = 640
 TAPE_TO_HOLE_RATIO = 1.35
 BINARIZATION_THRESHOLD = 80
-POLY_APPROX_COEFF = 0.05
+POLY_APPROX_COEFF = 0.04
 IMGRES = (640,480)
+IMGWIDTH = IMGRES[0]
 IMGAREA = IMGRES[0] * IMGRES[1]
 
 #openCV uses BGR
@@ -189,7 +189,7 @@ class Gauntlet:
         for comb in itertools.combinations(self.rects, 3):
             centers = tuple(rect.center for rect in comb)
             circle = ThreePointCircle(*centers)
-            if 30 < circle.r < 60:
+            if 50 < circle.r < 80:
                 self.circles.append(circle)
 
         smallestCircle = min(self.circles, key = lambda circle: circle.r)
@@ -206,7 +206,7 @@ class Gauntlet:
 
         self.rects = [
             rect for rect in self.rects \
-                if 0.75*self.avgR < dist(rect.center, self.center) < 1.25*self.avgR
+                if 0.65*self.avgR < dist(rect.center, self.center) < 1.35*self.avgR
         ]
 
     def assignRadialVectors(self):
@@ -285,12 +285,12 @@ class Gauntlet:
 def preprocessFrame(frame):
     #assumes frame is an opencv image object
     
-    undistortedImg = undistort(frame)
+    #undistortedImg = undistort(frame)
 
-    greyImg = cv2.cvtColor(undistortedImg, cv2.COLOR_BGR2GRAY)
+    greyImg = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     blurredImg = cv2.GaussianBlur(greyImg, (5,5), 0)
     #threshedImg = cv2.threshold(blurredImg, BINARIZATION_THRESHOLD, 255, cv2.THRESH_BINARY)[1]
-    threshedImg = cv2.adaptiveThreshold(blurredImg, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 101, 10)
+    threshedImg = cv2.adaptiveThreshold(blurredImg, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 101, 15)
     #note: last two arguments change the adaptive behavior of this threshold.
     #the second last argument is the size of the sample to take to determine a mean to use
     #as the threshold value. lower tends to make the image look more "grainy".
@@ -298,9 +298,9 @@ def preprocessFrame(frame):
     #each pixel before deciding if it goes to black or white. higher values make the image
     #appear more bright/whiter/washed out.
 
-    # edgedImg = autoCanny(blurredImg)
+    #edgedImg = autoCanny(blurredImg)
     
-    frame = cv2.cvtColor(blurredImg, cv2.COLOR_GRAY2BGR)
+    frame = cv2.cvtColor(greyImg, cv2.COLOR_GRAY2BGR)
     return threshedImg, frame
 
 #DIM=(2592, 1944)
@@ -332,14 +332,13 @@ def undistort(img):
     return undistorted_img
 
 def findTemplate(img, template):
-    template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
     w = template.shape[1]
     h = template.shape[0]
-    convResult = cv2.matchTemplate(img, template, cv2.TM_SQDIFF)
+    convResult = cv2.matchTemplate(img, template, cv2.TM_CCORR_NORMED)
     minVal, maxVal, minCoord, maxCoord = cv2.minMaxLoc(convResult)
 
     #cv2.rectangle(img, maxCoord, (maxCoord[0] + w, maxCoord[1] + h), 127, 2)
-    resRect = ResultRect((minCoord[0] + w//2, minCoord[1] + h//2), (w,h), 0, minVal)
+    resRect = ResultRect((maxCoord[0] + w//2, maxCoord[1] + h//2), (w,h), 0, maxVal)
     return resRect
 
 def getGauntlet(frame):
@@ -360,7 +359,7 @@ def getGauntlet(frame):
     for rect in gauntlet.rects:
         rect.getIntrinsicVector()
 
-    return gauntlet, contours
+    return gauntlet, [rect.contour for rect in rectangles]
 
 def identifyContours(contours):
     rectangles = []
@@ -369,21 +368,21 @@ def identifyContours(contours):
         perimeter = cv2.arcLength(contour, True)
 
         approxCnt = cv2.approxPolyDP(contour, POLY_APPROX_COEFF*perimeter, True)
-        if len(approxCnt) >= 4:
+        if len(approxCnt) == 4:
             tapeObj = TapeRect(approxCnt)
             if all((
-                1.5 < tapeObj.aspectRatio < 3,
-                0.0002 < tapeObj.boundingBoxArea/IMGAREA < 0.001,
-                tapeObj.contourArea / tapeObj.boundingBoxArea > 0.5
+                1.25 < tapeObj.aspectRatio < 3,
+                0.001 < tapeObj.boundingBoxArea/IMGAREA < 0.004,
+                tapeObj.contourArea / tapeObj.boundingBoxArea > 0.7
             )):
                 rectangles.append(tapeObj)
 
     #medianArea = np.median([rect.boundingBoxArea for rect in rectangles])
-    while len(rectangles) > 6:
-        medianArea = np.median([rect.boundingBoxArea for rect in rectangles])
-        rectangles.remove(
-            max(rectangles, key = lambda rect: abs(rect.boundingBoxArea - medianArea))
-        )
+    # while len(rectangles) > 6:
+    #     medianArea = np.median([rect.boundingBoxArea for rect in rectangles])
+    #     rectangles.remove(
+    #         max(rectangles, key = lambda rect: abs(rect.boundingBoxArea - medianArea))
+    #     )
 
     return rectangles
 
