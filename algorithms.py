@@ -267,7 +267,7 @@ class Gauntlet:
             if hasattr(rect, "number"):
                 cv2.putText(
                     frame,
-                    "{}".format(rect.number),
+                    "{}".format(rect.aspectRatio),
                     #"{:.3}".format(rect.contourArea / IMGAREA),
                     #"{},{}".format(*shiftImageCoords(frame, rect.intrinsicVector.end)),
                     (int(rect.center[0]), int(rect.center[1])),
@@ -390,6 +390,7 @@ def findTemplate(img, template):
 
 def getGauntlet(frame):
     contours = cv2.findContours(frame, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
+    rectangles = identifyContours(contours)
     try:
         
         # cv2.drawContours(frame, contours, -1, YELLOW, 2)
@@ -399,7 +400,7 @@ def getGauntlet(frame):
         #     vector = Vector((line[0], line[1]), (line[2], line[3]))
         #     vector.draw(frame, color=BLUE)
 
-        rectangles = identifyContours(contours)
+        
         gauntlet = Gauntlet(rectangles)
         gauntlet.encircleRects()
         gauntlet.assignRadialVectors()
@@ -411,7 +412,7 @@ def getGauntlet(frame):
         return gauntlet, [rect.contour for rect in rectangles]
     except Exception:
         print("Could not find gauntlet.")
-        return None, contours
+        return None, [rect.contour for rect in rectangles]
 
 def identifyContours(contours):
     rectangles = []
@@ -423,9 +424,9 @@ def identifyContours(contours):
         if len(approxCnt) == 4:
             tapeObj = TapeRect(approxCnt)
             if all((
-                1.25 < tapeObj.aspectRatio < 3,
-                0.001 < tapeObj.boundingBoxArea/IMGAREA < 0.004,
-                tapeObj.contourArea / tapeObj.boundingBoxArea > 0.7
+                1.4 < tapeObj.aspectRatio < 3,
+                0.001 < tapeObj.boundingBoxArea/IMGAREA < 0.005,
+                tapeObj.contourArea / tapeObj.boundingBoxArea > 0.8
             )):
                 rectangles.append(tapeObj)
 

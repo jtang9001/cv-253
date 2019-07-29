@@ -63,8 +63,8 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
                 gauntletObj.serialWrite(processedImage, ser)
             circles = None
         else:
-            dispImage = alg.undistortPerspective(houghImage)
-            circles = alg.findCircles(dispImage)
+            houghImage = alg.undistortPerspective(houghImage)
+            circles = alg.findCircles(houghImage)
 
             
             
@@ -72,9 +72,10 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         traceback.print_exc()
     finally:
         # dispImage = cv2.cvtColor(dispImage, cv2.COLOR_GRAY2BGR)
+        cv2.drawContours(dispImage, contours, -1, alg.VIOLET, 1)
         if lastGoodGauntlet is not None and circles is None:
             lastGoodGauntlet.draw(dispImage)
-            #cv2.drawContours(dispImage, contours, -1, alg.VIOLET, 2)
+            
 
         if circles is not None:
             circles[0].draw(dispImage)
