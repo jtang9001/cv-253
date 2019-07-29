@@ -371,7 +371,7 @@ def undistortFisheye(img):
     return undistorted_img
     
 persMtx = cv2.getPerspectiveTransform(
-    np.float32([ [140, 180], [500, 180], [0, 480], [640, 480] ]),
+    np.float32([ [100, 100], [540, 100], [0, 480], [640, 480] ]),
     np.float32([ [0, 0], [640, 0], [0, 480], [640, 480] ])
 )
 def undistortPerspective(img):
