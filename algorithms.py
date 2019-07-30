@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import imutils
 import itertools
+import traceback
 from math import pi
 
 TAPE_TO_HOLE_RATIO = 1.35
@@ -417,7 +418,8 @@ def getGauntlet(frame):
 
         return gauntlet, [rect.contour for rect in rectangles]
     except Exception:
-        print("Could not find gauntlet.")
+        print("Could not find gauntlet. Exception: ")
+        traceback.print_exc()
         return None, [rect.contour for rect in rectangles]
 
 def identifyContours(contours):
