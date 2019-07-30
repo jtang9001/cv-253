@@ -155,7 +155,6 @@ class Gauntlet:
         centerY = np.mean([rect.center[1] for rect in rectObjs])
         self.rectMean = (centerX, centerY)
         self.rects = []
-        
         for rect in rectObjs:
             self.addRect(rect)
 
@@ -193,8 +192,14 @@ class Gauntlet:
         assert len(self.rects) >= 3
         
         self.circles = []
+        
+        if len(self.rects) > 8:
+            print("More than 8 rectangles detected. Truncating list!")
+            processRects = self.rects[:8]
+        else:
+            processRects = self.rects
 
-        for comb in itertools.combinations(self.rects, 3):
+        for comb in itertools.combinations(processRects, 3):
             centers = tuple(rect.center for rect in comb)
             circle = ThreePointCircle(*centers)
             if 50 < circle.r < 80:
@@ -212,10 +217,14 @@ class Gauntlet:
         self.center = (centerX, centerY)
         self.centerCircle = Circle(centerX, centerY, self.avgR)
 
+        print("Before encircling rects, there were {} rects".format(len(self.rects)))
+        
         self.rects = [
             rect for rect in self.rects \
-                if 0.65*self.avgR < dist(rect.center, self.center) < 1.35*self.avgR
+                if 0.7*self.avgR < dist(rect.center, self.center) < 1.3*self.avgR
         ]
+
+        print("After encircling rects, {} rects remain".format(len(self.rects)))
 
     def assignRadialVectors(self):
         assert hasattr(self, "center")
@@ -233,7 +242,7 @@ class Gauntlet:
                 key = lambda rect: -1 * angleDiffCCW(rect.vector.angle, -pi/2)
             )
 
-            if abs(angleDiff(leftmostRect.vector.angle + pi, rightmostRect.vector.angle)) < pi/6:
+            if abs(angleDiff(leftmostRect.vector.angle + pi, rightmostRect.vector.angle)) < pi/4:
                 leftmostRect.assignNumber(0)
                 if not hasattr(rightmostRect, "number"):
                     rightmostRect.assignNumber(5)
@@ -267,7 +276,7 @@ class Gauntlet:
             if hasattr(rect, "number"):
                 cv2.putText(
                     frame,
-                    "{}".format(rect.aspectRatio),
+                    "{:.3f}".format(rect.aspectRatio),
                     #"{:.3}".format(rect.contourArea / IMGAREA),
                     #"{},{}".format(*shiftImageCoords(frame, rect.intrinsicVector.end)),
                     (int(rect.center[0]), int(rect.center[1])),
@@ -324,8 +333,7 @@ def findCircles(img):
     circles = []
     houghResults = cv2.HoughCircles(
         img, cv2.HOUGH_GRADIENT, 1.5, 100,
-        param1 = autoCannyUpper(img),
-
+        param1 = autoCannyUpper(img)
     )
     if houghResults is not None:
         print(houghResults)
@@ -399,8 +407,6 @@ def getGauntlet(frame):
         #     line = line[0]
         #     vector = Vector((line[0], line[1]), (line[2], line[3]))
         #     vector.draw(frame, color=BLUE)
-
-        
         gauntlet = Gauntlet(rectangles)
         gauntlet.encircleRects()
         gauntlet.assignRadialVectors()
