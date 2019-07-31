@@ -7,7 +7,32 @@ from math import pi
 
 #configuration constants
 TAPE_TO_HOLE_RATIO = 1.35
+
+PREP_GAUSS_SIZE = 5
+PREP_ADAPTIVE_BIN_SIZE = 101
+PREP_ADAPTIVE_EXPOSURE = 15
 BINARIZATION_THRESHOLD = 80
+
+ENCIRCLE_MIN_R = 50
+ENCIRCLE_MAX_R = 120
+ENCIRCLE_RECT_DIST_DEV = 0.3
+ENCIRCLE_MAX_RECTS = 8
+
+HOUGH_CIRCLE_THRESH = 120 # larger means less circles detected
+HOUGH_ACCUM_RES = 1.5 #larger means less resolution in accumulator
+HOUGH_MIN_SEPARATION = 20
+HOUGH_MIN_R = 50
+HOUGH_MAX_R = 150
+
+PERS_X_OFFSET = 100
+PERS_Y_OFFSET = 100
+
+RECT_MIN_AR = 1.4 #min aspect ratio
+RECT_MAX_AR = 2.5 #max aspect ratio
+RECT_MIN_AREA_PCT = 0.001
+RECT_MAX_AREA_PCT = 0.005
+RECT_MIN_BBOX_FILL = 0.8 #min pct that rect contour fills its minimal bounding box
+
 POLY_APPROX_COEFF = 0.04
 IMGRES = (640,480)
 IMGWIDTH = IMGRES[0]
@@ -196,16 +221,16 @@ class Gauntlet:
         
         self.circles = []
         
-        if len(self.rects) > 8:
-            print("More than 8 rectangles detected. Truncating list!")
-            processRects = self.rects[:8]
+        if len(self.rects) > ENCIRCLE_MAX_RECTS:
+            print("More than {} rectangles detected. Truncating list!".format(ENCIRCLE_MAX_RECTS))
+            processRects = self.rects[:ENCIRCLE_MAX_RECTS]
         else:
             processRects = self.rects
 
         for comb in itertools.combinations(processRects, 3):
             centers = tuple(rect.center for rect in comb)
             circle = ThreePointCircle(*centers)
-            if 50 < circle.r < 120:
+            if ENCIRCLE_MIN_R < circle.r < ENCIRCLE_MAX_R:
                 self.circles.append(circle)
 
         smallestCircle = min(self.circles, key = lambda circle: circle.r)
@@ -224,7 +249,8 @@ class Gauntlet:
         
         self.rects = [
             rect for rect in self.rects \
-                if 0.7*self.avgR < dist(rect.center, self.center) < 1.3*self.avgR
+                if (1-ENCIRCLE_RECT_DIST_DEV)*self.avgR < dist(rect.center, self.center) \
+                < (1+ENCIRCLE_RECT_DIST_DEV)*self.avgR
         ]
 
         print("After encircling rects, {} rects remain".format(len(self.rects)))
@@ -317,9 +343,12 @@ def preprocessFrame(frame):
     #undistortedImg = undistort(frame)
 
     greyImg = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    blurredImg = cv2.GaussianBlur(greyImg, (5,5), 0)
+    blurredImg = cv2.GaussianBlur(greyImg, (PREP_GAUSS_SIZE, PREP_GAUSS_SIZE), 0)
     #threshedImg = cv2.threshold(blurredImg, BINARIZATION_THRESHOLD, 255, cv2.THRESH_BINARY)[1]
-    threshedImg = cv2.adaptiveThreshold(blurredImg, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 101, 15)
+    threshedImg = cv2.adaptiveThreshold(
+        blurredImg, 255, cv2.ADAPTIVE_THRESH_MEAN_C, 
+        cv2.THRESH_BINARY, PREP_ADAPTIVE_BIN_SIZE, PREP_ADAPTIVE_EXPOSURE
+    )
     #note: last two arguments change the adaptive behavior of this threshold.
     #the second last argument is the size of the sample to take to determine a mean to use
     #as the threshold value. lower tends to make the image look more "grainy".
@@ -335,8 +364,12 @@ def preprocessFrame(frame):
 def findCircles(img):
     circles = []
     houghResults = cv2.HoughCircles(
-        img, cv2.HOUGH_GRADIENT, 1.5, 100,
-        param1 = autoCannyUpper(img)
+        img, cv2.HOUGH_GRADIENT, 
+        HOUGH_ACCUM_RES, HOUGH_MIN_SEPARATION,
+        param1 = autoCannyUpper(img),
+        param2 = HOUGH_CIRCLE_THRESH,
+        minRadius = HOUGH_MIN_R,
+        maxRadius = HOUGH_MAX_R
     )
     if houghResults is not None:
         print(houghResults)
@@ -353,6 +386,7 @@ def findCircles(img):
 
     return circles
 
+'''
 #DIM=(2592, 1944)
 #K=np.array([[90510.3736296528, 0.0, 1198.8033201561661], [0.0, 90208.86781844526, 923.4840835756314], [0.0, 0.0, 1.0]])
 #D=np.array([[-1510.2578641109285], [1821741.8099077642], [-1394482337.1053123], [477471975210.25684]])
@@ -380,15 +414,26 @@ def undistortFisheye(img):
     undistorted_img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
     
     return undistorted_img
-    
+'''
+
 persMtx = cv2.getPerspectiveTransform(
-    np.float32([ [100, 100], [540, 100], [0, 480], [640, 480] ]),
-    np.float32([ [0, 0], [640, 0], [0, 480], [640, 480] ])
+    np.float32([ 
+        [PERS_X_OFFSET, PERS_Y_OFFSET], 
+        [IMGRES[0] - PERS_X_OFFSET, PERS_Y_OFFSET],
+        [0, IMGRES[1]], 
+        [IMGRES[0], IMGRES[1]] 
+    ]),
+    np.float32([ 
+        [0, 0], 
+        [IMGRES[0], 0], 
+        [0, IMGRES[1]], 
+        [IMGRES[0], IMGRES[1]] 
+    ])
 )
 def undistortPerspective(img):
     return cv2.warpPerspective(img, persMtx, IMGRES)
 
-
+'''
 def findTemplate(img, template):
     w = template.shape[1]
     h = template.shape[0]
@@ -398,6 +443,7 @@ def findTemplate(img, template):
     #cv2.rectangle(img, maxCoord, (maxCoord[0] + w, maxCoord[1] + h), 127, 2)
     resRect = ResultRect((maxCoord[0] + w//2, maxCoord[1] + h//2), (w,h), 0, maxVal)
     return resRect
+'''
 
 def getGauntlet(frame):
     contours = cv2.findContours(frame, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
@@ -421,7 +467,7 @@ def getGauntlet(frame):
         return gauntlet, [rect.contour for rect in rectangles]
     except Exception:
         print("Could not find gauntlet. Exception: ")
-        #traceback.print_exc()
+        traceback.print_exc()
         return None, [rect.contour for rect in rectangles]
 
 def identifyContours(contours):
@@ -434,9 +480,9 @@ def identifyContours(contours):
         if len(approxCnt) == 4:
             tapeObj = TapeRect(approxCnt)
             if all((
-                1.4 < tapeObj.aspectRatio < 3,
-                0.001 < tapeObj.boundingBoxArea/IMGAREA < 0.005,
-                tapeObj.contourArea / tapeObj.boundingBoxArea > 0.8
+                RECT_MIN_AR < tapeObj.aspectRatio < RECT_MAX_AR,
+                RECT_MIN_AREA_PCT < tapeObj.boundingBoxArea/IMGAREA < RECT_MAX_AREA_PCT,
+                tapeObj.contourArea / tapeObj.boundingBoxArea > RECT_MIN_BBOX_FILL
             )):
                 rectangles.append(tapeObj)
 
