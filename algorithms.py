@@ -177,6 +177,12 @@ class TapeRect:
         self.intrinsicVector = PolarVector(self.center, max(self.dims), self.angle)
         self.intrinsicVector.scale(TAPE_TO_HOLE_RATIO)
 
+    def draw(self, frame):
+        cv2.drawContours(frame, [self.contour], -1, GREEN, 2)
+
+    def drawBB(self, frame):
+        cv2.drawContours(frame, [self.boundingBoxContour], -1, GREEN, 2)
+
 class Gauntlet:
     def __init__(self, rectObjs):
         centerX = np.mean([rect.center[0] for rect in rectObjs])
@@ -296,7 +302,7 @@ class Gauntlet:
 
     def draw(self, frame):
         for rect in self.rects:
-            cv2.drawContours(frame, [rect.contour], -1, GREEN, 2)
+            rect.draw(frame)
             #rect.vector.draw(frame)
             rect.intrinsicVector.draw(frame, color = BLUE)
             rect.intrinsicVector.drawEnd(frame)
@@ -445,8 +451,10 @@ def findTemplate(img, template):
     return resRect
 '''
 
-def getGauntlet(frame):
-    contours = cv2.findContours(frame, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
+def getContours(frame):
+    return cv2.findContours(frame, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
+
+def getGauntlet(contours):
     rectangles = identifyContours(contours)
     try:
         
@@ -469,6 +477,7 @@ def getGauntlet(frame):
         print("Could not find gauntlet. Exception: ")
         traceback.print_exc()
         return None, [rect.contour for rect in rectangles]
+
 
 def identifyContours(contours):
     rectangles = []
@@ -494,6 +503,12 @@ def identifyContours(contours):
     #     )
 
     return rectangles
+
+def identifyTapeStrip(contours):
+    largestCont = max(contours, key = lambda contour: cv2.arclength(contour, True))
+    contObj = TapeRect(largestCont)
+
+    return contObj
 
 
 
