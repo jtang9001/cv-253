@@ -18,7 +18,7 @@ ser = serial.Serial(
     timeout = 1.0
 )
 
-camera = PiCamera(resolution=res, framerate=20)
+camera = PiCamera(resolution=res, framerate=30)
 rawCapture = PiRGBArray(camera, size=res)
 
 #def writeGauntletPos(img, gauntObj: alg.Gauntlet):

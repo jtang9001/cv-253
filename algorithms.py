@@ -5,6 +5,7 @@ import itertools
 import traceback
 from math import pi
 
+#configuration constants
 TAPE_TO_HOLE_RATIO = 1.35
 BINARIZATION_THRESHOLD = 80
 POLY_APPROX_COEFF = 0.04
@@ -12,6 +13,7 @@ IMGRES = (640,480)
 IMGWIDTH = IMGRES[0]
 IMGAREA = IMGRES[0] * IMGRES[1]
 
+#standardized color tuples
 #openCV uses BGR
 RED = (0,0,255)
 GREEN = (0,255,0)
