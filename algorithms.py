@@ -203,7 +203,7 @@ class Gauntlet:
         for comb in itertools.combinations(processRects, 3):
             centers = tuple(rect.center for rect in comb)
             circle = ThreePointCircle(*centers)
-            if 50 < circle.r < 80:
+            if 50 < circle.r < 120:
                 self.circles.append(circle)
 
         smallestCircle = min(self.circles, key = lambda circle: circle.r)
@@ -277,9 +277,9 @@ class Gauntlet:
             if hasattr(rect, "number"):
                 cv2.putText(
                     frame,
-                    "{:.3f}".format(rect.aspectRatio),
+                    #"{:.3f}".format(rect.aspectRatio),
                     #"{:.3}".format(rect.contourArea / IMGAREA),
-                    #"{},{}".format(*shiftImageCoords(frame, rect.intrinsicVector.end)),
+                    "{},{}".format(*shiftImageCoords(frame, rect.intrinsicVector.end)),
                     (int(rect.center[0]), int(rect.center[1])),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.75, ORANGE, 1
@@ -419,7 +419,7 @@ def getGauntlet(frame):
         return gauntlet, [rect.contour for rect in rectangles]
     except Exception:
         print("Could not find gauntlet. Exception: ")
-        traceback.print_exc()
+        #traceback.print_exc()
         return None, [rect.contour for rect in rectangles]
 
 def identifyContours(contours):
