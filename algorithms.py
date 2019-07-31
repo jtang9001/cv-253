@@ -11,7 +11,7 @@ TAPE_TO_HOLE_RATIO = 1.35
 PREP_GAUSS_SIZE = 5
 PREP_ADAPTIVE_BIN_SIZE = 101
 PREP_ADAPTIVE_EXPOSURE = 15
-BINARIZATION_THRESHOLD = 80
+BINARIZATION_THRESHOLD = 100
 
 ENCIRCLE_MIN_R = 50
 ENCIRCLE_MAX_R = 120
@@ -344,10 +344,10 @@ def preprocessFrame(frame):
 
     greyImg = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     blurredImg = cv2.GaussianBlur(greyImg, (PREP_GAUSS_SIZE, PREP_GAUSS_SIZE), 0)
-    invThreshImg = cv2.threshold(blurredImg, BINARIZATION_THRESHOLD, 255, cv2.THRESH_BINARY_INV)[1]
+    #invThreshImg = cv2.threshold(blurredImg, BINARIZATION_THRESHOLD, 255, cv2.THRESH_BINARY_INV)[1]
     threshedImg = cv2.adaptiveThreshold(
         blurredImg, 255, cv2.ADAPTIVE_THRESH_MEAN_C, 
-        cv2.THRESH_BINARY, PREP_ADAPTIVE_BIN_SIZE, PREP_ADAPTIVE_EXPOSURE
+        cv2.THRESH_BINARY_INV, PREP_ADAPTIVE_BIN_SIZE, PREP_ADAPTIVE_EXPOSURE
     )
     #note: last two arguments change the adaptive behavior of this threshold.
     #the second last argument is the size of the sample to take to determine a mean to use
@@ -358,7 +358,7 @@ def preprocessFrame(frame):
 
     #edgedImg = autoCanny(blurredImg)
     
-    frame = cv2.cvtColor(invThreshImg, cv2.COLOR_GRAY2BGR)
+    frame = cv2.cvtColor(threshedImg, cv2.COLOR_GRAY2BGR)
     return threshedImg, blurredImg, frame
 
 def findCircles(img):

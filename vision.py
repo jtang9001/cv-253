@@ -63,9 +63,9 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
                 gauntletObj.serialWrite(processedImage, ser)
             circles = None
         else:
-            dispImage = alg.undistortPerspective(houghImage)
-            circles = alg.findCircles(dispImage)
-            dispImage = cv2.cvtColor(dispImage, cv2.COLOR_GRAY2BGR)
+            houghImage = alg.undistortPerspective(houghImage)
+            circles = alg.findCircles(houghImage)
+            #dispImage = cv2.cvtColor(dispImage, cv2.COLOR_GRAY2BGR)
 
             
             
