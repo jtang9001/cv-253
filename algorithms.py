@@ -10,7 +10,7 @@ TAPE_TO_HOLE_RATIO = 1.35
 
 PREP_GAUSS_SIZE = 5
 PREP_ADAPTIVE_BIN_SIZE = 101
-PREP_ADAPTIVE_EXPOSURE = 15
+PREP_ADAPTIVE_EXPOSURE = 45
 BINARIZATION_THRESHOLD = 100
 
 ENCIRCLE_MIN_R = 50
@@ -505,7 +505,7 @@ def identifyContours(contours):
     return rectangles
 
 def identifyTapeStrip(contours):
-    largestCont = max(contours, key = lambda contour: cv2.arclength(contour, True))
+    largestCont = max(contours, key = lambda contour: cv2.arcLength(contour, True))
     contObj = TapeRect(largestCont)
 
     return contObj
