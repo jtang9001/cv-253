@@ -513,7 +513,7 @@ def identifyTapeStrip(contours):
     contObj = TapePoly(largestCont)
     contObj.simplifyContour(simplifyCoeff = 0.005)
     reprAngle = pi
-    reprCircle = Circle(0, 0, 3)
+    reprCircle = Circle(0, 240, 3) # only start counting vertices in lower half of image
 
     for i in range(contObj.numVertices):
         prevPoint = contObj.contour[ (i-1) % contObj.numVertices ][0]
@@ -539,6 +539,10 @@ def identifyTapeStrip(contours):
                 contObj.assignDescriptor("T")
             else:
                 contObj.assignDescriptor("Y")
+
+    if reprAngle == pi:
+        contObj = None
+        reprCircle = None
 
     return contObj, reprCircle
 

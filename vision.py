@@ -37,8 +37,9 @@ time.sleep(0.25)
 
 lastGoodGauntlet = None
 circles = None
-largestContour = None
+tapeCnt = None
 reprCircle = None
+lastGoodIsect = None
 TEMPLATE = cv2.imread("template.png")
 TEMPLATE = cv2.cvtColor(TEMPLATE, cv2.COLOR_BGR2GRAY)
 
@@ -65,12 +66,15 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
                 lastGoodGauntlet = gauntletObj
                 gauntletObj.serialWrite(processedImg, ser)
             circles = None
-            largestContour = None
+            tapeCnt = None
             reprCircle = None
+            lastGoodIsect = None
         else:
             houghImg = alg.undistortPerspective(houghImg)
             circles = alg.findCircles(houghImg)
             tapeCnt, reprCircle = alg.identifyTapeStrip(imageCnts)
+            if tapeCnt is not None:
+                lastGoodIsect = tapeCnt.descriptor
             #dispImg = cv2.cvtColor(dispImg, cv2.COLOR_GRAY2BGR)
 
             
@@ -84,9 +88,13 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         if lastGoodGauntlet is not None and circles is None:
             lastGoodGauntlet.draw(dispImg)
             
-        if largestContour is not None:
-            largestContour.draw(dispImg)
+        if tapeCnt is not None:
+            tapeCnt.draw(dispImg)
             reprCircle.draw(dispImg)
+        
+        if lastGoodIsect is not None:
+            print("{};".format(lastGoodIsect))
+            ser.write("{};".format(lastGoodIsect).encode("ascii", "ignore"))
 
         if circles is not None:
             dispImg = cv2.cvtColor(houghImg, cv2.COLOR_GRAY2BGR)
