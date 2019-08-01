@@ -24,7 +24,7 @@ rawCapture = PiRGBArray(camera, size=res)
 #def writeGauntletPos(img, gauntObj: alg.Gauntlet):
 #    dataStr = "G"
 #    for rect in gauntObj.rects:
-#        coords = alg.shiftImageCoords(img, rect.intrinsicVector.end)
+#        coords = alg.shiftImgCoords(img, rect.intrinsicVector.end)
 #        dataStr += "{},{};".format(*coords)
 #    dataStr += "\n"
 #    print(dataStr)
@@ -48,54 +48,54 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     try:
         # grab the raw NumPy array representing the image, then initialize the timestamp
         # and occupied/unoccupied text
-        originalImage = frame.array
+        originalImg = frame.array
         
-        processedImage, houghImage, dispImage = alg.preprocessFrame(originalImage)
+        processedImg, houghImg, dispImg = alg.preprocessFrame(originalImg)
         preprocessTime = time.time()
 
-        # resRect = alg.findTemplate(processedImage, TEMPLATE)
-        # resRect.draw(dispImage)
+        # resRect = alg.findTemplate(processedImg, TEMPLATE)
+        # resRect.draw(dispImg)
 
-        imageCnts = alg.getContours(processedImage)
+        imageCnts = alg.getContours(processedImg)
         gauntletObj, rectContours = alg.getGauntlet(imageCnts)
         
         if gauntletObj is not None:
             if len(gauntletObj.rects) == 6:
                 lastGoodGauntlet = gauntletObj
-                gauntletObj.serialWrite(processedImage, ser)
+                gauntletObj.serialWrite(processedImg, ser)
             circles = None
             largestContour = None
         else:
-            houghImage = alg.undistortPerspective(houghImage)
-            circles = alg.findCircles(houghImage)
+            houghImg = alg.undistortPerspective(houghImg)
+            circles = alg.findCircles(houghImg)
             largestContour = alg.identifyTapeStrip(imageCnts)
-            #dispImage = cv2.cvtColor(dispImage, cv2.COLOR_GRAY2BGR)
+            #dispImg = cv2.cvtColor(dispImg, cv2.COLOR_GRAY2BGR)
 
             
             
     except Exception:
         traceback.print_exc()
     finally:
-        # dispImage = cv2.cvtColor(dispImage, cv2.COLOR_GRAY2BGR)
-        cv2.drawContours(dispImage, imageCnts, -1, alg.VIOLET, 1)
+        # dispImg = cv2.cvtColor(dispImg, cv2.COLOR_GRAY2BGR)
+        cv2.drawContours(dispImg, imageCnts, -1, alg.VIOLET, 1)
 
         if lastGoodGauntlet is not None and circles is None:
-            lastGoodGauntlet.draw(dispImage)
+            lastGoodGauntlet.draw(dispImg)
             
         if largestContour is not None:
-            largestContour.draw(dispImage)
+            largestContour.draw(dispImg)
 
         if circles is not None:
-            dispImage = cv2.cvtColor(houghImage, cv2.COLOR_GRAY2BGR)
-            circles[0].draw(dispImage)
-            circles[0].serialWrite(houghImage, ser)
+            dispImg = cv2.cvtColor(houghImg, cv2.COLOR_GRAY2BGR)
+            circles[0].draw(dispImg)
+            circles[0].serialWrite(houghImg, ser)
             
             
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
         
         # show the frame
-        cv2.imshow("Frame", dispImage)
+        cv2.imshow("Frame", dispImg)
         key = cv2.waitKey(1) & 0xFF
      
         # if the `q` key was pressed, break from the loop

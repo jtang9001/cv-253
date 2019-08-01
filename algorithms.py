@@ -8,7 +8,7 @@ from math import pi
 #configuration constants
 TAPE_TO_HOLE_RATIO = 1.35
 
-PREP_GAUSS_SIZE = 5
+PREP_GAUSS_SIZE = 11
 PREP_ADAPTIVE_BIN_SIZE = 101
 PREP_ADAPTIVE_EXPOSURE = 45
 BINARIZATION_THRESHOLD = 100
@@ -36,6 +36,7 @@ RECT_MIN_BBOX_FILL = 0.8 #min pct that rect contour fills its minimal bounding b
 POLY_APPROX_COEFF = 0.04
 IMGRES = (640,480)
 IMGWIDTH = IMGRES[0]
+IMGHEIGHT = IMGRES[1]
 IMGAREA = IMGRES[0] * IMGRES[1]
 
 #standardized color tuples
@@ -93,8 +94,6 @@ class Circle:
         print(dataStr)
         serialObject.write(dataStr.encode("ascii", "ignore"))
         
-    
-
 class ThreePointCircle(Circle):
     def __init__(self,a,b,c):
         x,y,z = a[0] + (a[1])*1j, b[0] + (b[1])*1j, c[0] + (c[1])*1j
@@ -122,8 +121,9 @@ class Vector:
         self.vector = [component * scaleFactor for component in self.vector]
         self.end = (self.start[0] + self.vector[0], self.start[1] - self.vector[1])
 
-        
-    
+    def isOffEdge(self):
+        return isPointOffEdge(self.start) or isPointOffEdge(self.end)
+
     def draw(self, img, color = CYAN, thickness = 2):
         cv2.line(
             img, 
@@ -147,6 +147,7 @@ class PolarVector(Vector):
 
 class TapeRect:
     def __init__(self, contour):
+        self.perimeter = cv2.arcLength(contour, True)
         self.contour = contour
         self.contourArea = cv2.contourArea(self.contour)
         self.boundingBox = cv2.minAreaRect(contour)
@@ -182,6 +183,43 @@ class TapeRect:
 
     def drawBB(self, frame):
         cv2.drawContours(frame, [self.boundingBoxContour], -1, GREEN, 2)
+
+class TapePoly(TapeRect):
+    def __init__(self, contour):
+        super().__init__(contour)
+    
+    def simplifyContour(self, simplifyCoeff = POLY_APPROX_COEFF):
+        self.contour = cv2.approxPolyDP(self.contour, simplifyCoeff*self.perimeter, True)
+        self.numVertices = self.contour.shape[0]
+        self.perimeter = cv2.arcLength(self.contour, True)
+        self.contourArea = cv2.contourArea(self.contour)
+        self.boundingBox = cv2.minAreaRect(self.contour)
+        self.boundingBoxContour = np.int0(cv2.boxPoints(self.boundingBox))
+        self.center = self.boundingBox[0]
+        self.dims = self.boundingBox[1]
+        self.aspectRatio = self.dims[0] / self.dims[1]
+        self.boundingBoxArea = self.dims[0] * self.dims[1]
+        self.angle = -1 * self.boundingBox[2]
+
+        if self.aspectRatio < 1:
+            self.aspectRatio = 1 / self.aspectRatio
+            self.angle += 90
+
+        self.angle = degToRad(self.angle)
+
+    def assignDescriptor(self, descriptor):
+        self.descriptor = descriptor
+
+    def draw(self, frame):
+        cv2.drawContours(frame, [self.contour], -1, GREEN, 2)
+        if hasattr(self, "descriptor"):
+            cv2.putText(
+                frame,
+                "{}".format(self.descriptor),
+                (int(self.center[0]), int(self.center[1])),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.75, ORANGE, 2
+            )
 
 class Gauntlet:
     def __init__(self, rectObjs):
@@ -293,7 +331,6 @@ class Gauntlet:
         except AttributeError:
             print("Attempted to generate ref vector without first assigning vectors to rects")
 
-
     def getRectByNum(self, number):
         for rect in self.rects:
             if hasattr(rect, "number"):
@@ -343,11 +380,18 @@ class Gauntlet:
         print(dataStr)
         serialObject.write(dataStr.encode("ascii", "ignore"))
 
+hsvLower = (0,0,0)
+hsvUpper = (255,200,255)
 def preprocessFrame(frame):
     #assumes frame is an opencv image object
     
     #undistortedImg = undistort(frame)
 
+    # hsvImg = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    # hsvMask = cv2.inRange(hsvImg, hsvLower, hsvUpper)
+    # hsvFiltered = cv2.bitwise_and(hsvImg, hsvImg, mask = hsvMask)
+
+    # _, _, greyImg = cv2.split(hsvFiltered)
     greyImg = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     blurredImg = cv2.GaussianBlur(greyImg, (PREP_GAUSS_SIZE, PREP_GAUSS_SIZE), 0)
     #invThreshImg = cv2.threshold(blurredImg, BINARIZATION_THRESHOLD, 255, cv2.THRESH_BINARY_INV)[1]
@@ -364,7 +408,7 @@ def preprocessFrame(frame):
 
     #edgedImg = autoCanny(blurredImg)
     
-    frame = cv2.cvtColor(threshedImg, cv2.COLOR_GRAY2BGR)
+    frame = cv2.cvtColor(greyImg, cv2.COLOR_GRAY2BGR)
     return threshedImg, blurredImg, frame
 
 def findCircles(img):
@@ -392,36 +436,6 @@ def findCircles(img):
 
     return circles
 
-'''
-#DIM=(2592, 1944)
-#K=np.array([[90510.3736296528, 0.0, 1198.8033201561661], [0.0, 90208.86781844526, 923.4840835756314], [0.0, 0.0, 1.0]])
-#D=np.array([[-1510.2578641109285], [1821741.8099077642], [-1394482337.1053123], [477471975210.25684]])
-DIM=(2592, 1944)
-K=np.array([[1269.7500654953033, 0.0, 1188.300163188966], [0.0, 1267.444016376746, 925.9519344952482], [0.0, 0.0, 1.0]])
-D=np.array([[-0.029225632583395427], [-0.031476036031717884], [0.03403889451220812], [-0.01493718467056338]])
-
-balance=0.25
-dim2=IMGRES
-dim3=IMGRES
-
-dim1 = IMGRES  #dim1 is the dimension of input image to un-distort
-assert dim1[0]/dim1[1] == DIM[0]/DIM[1], "Image to undistort needs to have same aspect ratio as the ones used in calibration"
-if not dim2:
-    dim2 = dim1
-if not dim3:
-    dim3 = dim1
-scaled_K = K * dim1[0] / DIM[0]  # The values of K is to scale with image dimension.
-scaled_K[2][2] = 1.0  # Except that K[2][2] is always 1.0
-# This is how scaled_K, dim2 and balance are used to determine the final K used to un-distort image. OpenCV document failed to make this clear!
-new_K = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(scaled_K, D, dim2, np.eye(3), balance=balance)
-map1, map2 = cv2.fisheye.initUndistortRectifyMap(scaled_K, D, np.eye(3), new_K, dim3, cv2.CV_16SC2)
-
-def undistortFisheye(img):
-    undistorted_img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
-    
-    return undistorted_img
-'''
-
 persMtx = cv2.getPerspectiveTransform(
     np.float32([ 
         [PERS_X_OFFSET, PERS_Y_OFFSET], 
@@ -439,20 +453,13 @@ persMtx = cv2.getPerspectiveTransform(
 def undistortPerspective(img):
     return cv2.warpPerspective(img, persMtx, IMGRES)
 
-'''
-def findTemplate(img, template):
-    w = template.shape[1]
-    h = template.shape[0]
-    convResult = cv2.matchTemplate(img, template, cv2.TM_CCORR_NORMED)
-    minVal, maxVal, minCoord, maxCoord = cv2.minMaxLoc(convResult)
-
-    #cv2.rectangle(img, maxCoord, (maxCoord[0] + w, maxCoord[1] + h), 127, 2)
-    resRect = ResultRect((maxCoord[0] + w//2, maxCoord[1] + h//2), (w,h), 0, maxVal)
-    return resRect
-'''
-
 def getContours(frame):
     return cv2.findContours(frame, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
+
+def simplifyContour(contour, simplifyCoeff = POLY_APPROX_COEFF):
+    perimeter = cv2.arcLength(contour, True)
+    approxCnt = cv2.approxPolyDP(contour, simplifyCoeff*perimeter, True)
+    return approxCnt
 
 def getGauntlet(contours):
     rectangles = identifyContours(contours)
@@ -478,14 +485,11 @@ def getGauntlet(contours):
         traceback.print_exc()
         return None, [rect.contour for rect in rectangles]
 
-
 def identifyContours(contours):
     rectangles = []
 
     for contour in contours:
-        perimeter = cv2.arcLength(contour, True)
-
-        approxCnt = cv2.approxPolyDP(contour, POLY_APPROX_COEFF*perimeter, True)
+        approxCnt = simplifyContour(contour)
         if len(approxCnt) == 4:
             tapeObj = TapeRect(approxCnt)
             if all((
@@ -506,17 +510,42 @@ def identifyContours(contours):
 
 def identifyTapeStrip(contours):
     largestCont = max(contours, key = lambda contour: cv2.arcLength(contour, True))
-    contObj = TapeRect(largestCont)
+    contObj = TapePoly(largestCont)
+    contObj.simplifyContour(simplifyCoeff = 0.005)
+    reprAngle = pi
+    reprCircle = Circle(0, 0, 3)
 
-    return contObj
+    for i in range(contObj.numVertices):
+        prevPoint = contObj.contour[ (i-1) % contObj.numVertices ][0]
+        thisPoint = contObj.contour[i][0]
+        nextPoint = contObj.contour[ (i+1) % contObj.numVertices ][0]
 
+        vec1 = Vector(thisPoint, prevPoint)
+        vec2 = Vector(thisPoint, nextPoint)
 
+        if any((
+            vec1.magnitude < 0.05*IMGWIDTH,
+            vec2.magnitude < 0.05*IMGWIDTH,
+            isPointOffEdge(thisPoint, margin = 0.02)
+        )):
+            continue
+        
+        if (pi/5 < abs(angleDiff(vec1.angle, vec2.angle)) < 5*pi/8
+            and thisPoint[1] > reprCircle.y):
+            reprAngle = abs(angleDiff(vec1.angle, vec2.angle))
+            reprCircle = Circle(thisPoint[0], thisPoint[1], 10)
+
+            if reprAngle > pi / 3:
+                contObj.assignDescriptor("T")
+            else:
+                contObj.assignDescriptor("Y")
+
+    return contObj, reprCircle
 
 def shiftImageCoords(img, coord):
     imgWidth = img.shape[1]
     imgHeight = img.shape[0]
     return (int(round(coord[0] - imgWidth/2)), int(round(imgHeight/2 - coord[1])))
-
 
 def autoCanny(image, sigma=0.333):
     # compute the median of the single channel pixel intensities
@@ -563,32 +592,46 @@ def angleDiffCW(fromAngle, toAngle):
 def degToRad(degrees):
     return degrees * pi / 180
 
-
 def dist(a, b):
     return ((a[0]-b[0])**2 + (a[1]-b[1])**2)**0.5
 
+def isPointOffEdge(point, margin = 0):
+    assert len(point) == 2
+    return any((
+            point[0] <= margin * IMGWIDTH,
+            point[1] <= margin * IMGHEIGHT,
+            point[0] >= (1-margin) * IMGWIDTH,
+            point[1] >= (1-margin) * IMGHEIGHT,
+        ))
+
 if __name__ == "__main__":
 
-    originalImg = cv2.imread("gauntlet.jpg")
-    template = cv2.imread("template.png")
-    resizedImg = imutils.resize(originalImg, width=IMGWIDTH)
-    searchImg, dispImg = preprocessFrame(resizedImg)
-    resRect = findTemplate(searchImg, template)
-    resRect.draw(dispImg)
+    # originalImg = cv2.imread("gauntlet.jpg")
+    # template = cv2.imread("template.png")
+    # resizedImg = imutils.resize(originalImg, width=IMGWIDTH)
+    # searchImg, dispImg = preprocessFrame(resizedImg)
+    # resRect = findTemplate(searchImg, template)
+    # resRect.draw(dispImg)
     
-    cv2.imshow("Frame", dispImg)
-    cv2.waitKey(0)
+    # cv2.imshow("Frame", dispImg)
+    # cv2.waitKey(0)
 
-    # import glob
-    # import traceback
+    import glob
+    import traceback
 
-    # for img in glob.glob("batch 3 photos/*.jpg"):
-    #     try:
-    #         #originalImg = cv2.imread(img)
-    #         originalImg = cv2.imread("gauntlet.jpg")
-    #         resizedImg = imutils.resize(originalImg, width=IMGWIDTH)
+    for img in glob.glob("Tape photos/*.jpg"):
+        try:
+            originalImg = cv2.imread(img)
+            #originalImg = cv2.imread("gauntlet.jpg")
+            resizedImg = imutils.resize(originalImg, width=IMGWIDTH)
 
-    #         cv2.imshow("Frame", getGauntlet(resizedImg)[0])
-    #         cv2.waitKey(0)
-    #     except Exception:
-    #         traceback.print_exc()
+            threshImg, houghImg, dispImg = preprocessFrame(resizedImg)
+            contours = getContours(threshImg)
+            tapeOutline, centerCircle = identifyTapeStrip(contours)
+            tapeOutline.draw(dispImg)
+            centerCircle.draw(dispImg)
+
+            cv2.imshow("Frame", dispImg)
+            cv2.waitKey(0)
+        except OSError:
+            traceback.print_exc()
