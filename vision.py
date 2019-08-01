@@ -38,6 +38,7 @@ time.sleep(0.25)
 lastGoodGauntlet = None
 circles = None
 largestContour = None
+reprCircle = None
 TEMPLATE = cv2.imread("template.png")
 TEMPLATE = cv2.cvtColor(TEMPLATE, cv2.COLOR_BGR2GRAY)
 
@@ -65,10 +66,11 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
                 gauntletObj.serialWrite(processedImg, ser)
             circles = None
             largestContour = None
+            reprCircle = None
         else:
             houghImg = alg.undistortPerspective(houghImg)
             circles = alg.findCircles(houghImg)
-            largestContour = alg.identifyTapeStrip(imageCnts)
+            tapeCnt, reprCircle = alg.identifyTapeStrip(imageCnts)
             #dispImg = cv2.cvtColor(dispImg, cv2.COLOR_GRAY2BGR)
 
             
@@ -84,6 +86,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             
         if largestContour is not None:
             largestContour.draw(dispImg)
+            reprCircle.draw(dispImg)
 
         if circles is not None:
             dispImg = cv2.cvtColor(houghImg, cv2.COLOR_GRAY2BGR)
