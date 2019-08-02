@@ -46,6 +46,9 @@ TEMPLATE = cv2.cvtColor(TEMPLATE, cv2.COLOR_BGR2GRAY)
 # capture frames from the camera
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     startTime = time.time()
+    if ser.in_waiting > 0:
+        line = ser.readline()
+        print(time.strftime("%H:%M:%S"), line)
     
     try:
         # grab the raw NumPy array representing the image, then initialize the timestamp
@@ -80,7 +83,8 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             
             
     except Exception:
-        traceback.print_exc()
+        #traceback.print_exc()
+        pass
     finally:
         # dispImg = cv2.cvtColor(dispImg, cv2.COLOR_GRAY2BGR)
         cv2.drawContours(dispImg, imageCnts, -1, alg.VIOLET, 1)
@@ -93,7 +97,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             reprCircle.draw(dispImg)
         
         if lastGoodIsect is not None:
-            print("{};".format(lastGoodIsect))
+            #print("{};".format(lastGoodIsect))
             ser.write("{};".format(lastGoodIsect).encode("ascii", "ignore"))
 
         if circles is not None:
@@ -116,6 +120,6 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     endTime = time.time()
     totalTime = endTime - startTime
     pctUndistorting = (preprocessTime - startTime) / totalTime * 100
-    print("FPS: {:.2f}, {:.2f}% spent undistorting".format(
-        1/(endTime - startTime), pctUndistorting
-    ))
+#    print("FPS: {:.2f}, {:.2f}% spent undistorting".format(
+#        1/(endTime - startTime), pctUndistorting
+#    ))

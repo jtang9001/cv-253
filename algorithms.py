@@ -29,8 +29,8 @@ PERS_Y_OFFSET = 100
 
 RECT_MIN_AR = 1.4 #min aspect ratio
 RECT_MAX_AR = 2.5 #max aspect ratio
-RECT_MIN_AREA_PCT = 0.001
-RECT_MAX_AREA_PCT = 0.005
+RECT_MIN_AREA_PCT = 0.00075
+RECT_MAX_AREA_PCT = 0.003
 RECT_MIN_BBOX_FILL = 0.8 #min pct that rect contour fills its minimal bounding box
 
 POLY_APPROX_COEFF = 0.04
@@ -91,7 +91,7 @@ class Circle:
     def serialWrite(self, img, serialObject):
         coords = shiftImageCoords(img, self.center)
         dataStr = "P{},{};\n".format(*coords)
-        print(dataStr)
+        #print(dataStr)
         serialObject.write(dataStr.encode("ascii", "ignore"))
         
 class ThreePointCircle(Circle):
@@ -266,7 +266,7 @@ class Gauntlet:
         self.circles = []
         
         if len(self.rects) > ENCIRCLE_MAX_RECTS:
-            print("More than {} rectangles detected. Truncating list!".format(ENCIRCLE_MAX_RECTS))
+            #print("More than {} rectangles detected. Truncating list!".format(ENCIRCLE_MAX_RECTS))
             processRects = self.rects[:ENCIRCLE_MAX_RECTS]
         else:
             processRects = self.rects
@@ -289,7 +289,7 @@ class Gauntlet:
         self.center = (centerX, centerY)
         self.centerCircle = Circle(centerX, centerY, self.avgR)
 
-        print("Before encircling rects, there were {} rects".format(len(self.rects)))
+        #print("Before encircling rects, there were {} rects".format(len(self.rects)))
         
         self.rects = [
             rect for rect in self.rects \
@@ -297,7 +297,7 @@ class Gauntlet:
                 < (1+ENCIRCLE_RECT_DIST_DEV)*self.avgR
         ]
 
-        print("After encircling rects, {} rects remain".format(len(self.rects)))
+        #print("After encircling rects, {} rects remain".format(len(self.rects)))
 
     def assignRadialVectors(self):
         assert hasattr(self, "center")
@@ -327,6 +327,9 @@ class Gauntlet:
                     self.refAngle = rightmostRect.vector.angle
 
             self.refVector = PolarVector(self.center, self.avgR, self.refAngle)
+            
+            for rect in self.rects:
+                
         
         except AttributeError:
             print("Attempted to generate ref vector without first assigning vectors to rects")
@@ -349,8 +352,8 @@ class Gauntlet:
                 cv2.putText(
                     frame,
                     #"{:.3f}".format(rect.aspectRatio),
-                    #"{:.3}".format(rect.contourArea / IMGAREA),
-                    "{},{}".format(*shiftImageCoords(frame, rect.intrinsicVector.end)),
+                    "{:.3}".format(rect.contourArea / IMGAREA),
+                    #"{},{}".format(*shiftImageCoords(frame, rect.intrinsicVector.end)),
                     (int(rect.center[0]), int(rect.center[1])),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.75, ORANGE, 1
@@ -422,13 +425,13 @@ def findCircles(img):
         maxRadius = HOUGH_MAX_R
     )
     if houghResults is not None:
-        print(houghResults)
+        #print(houghResults)
         for (x,y,r) in houghResults[0,:]:
             if r == 0:
                 continue
             circles.append(Circle(x,y,r))
     else:
-        print("No circles found")
+        #print("No circles found")
         return None
 
     if len(circles) == 0:
@@ -481,8 +484,8 @@ def getGauntlet(contours):
 
         return gauntlet, [rect.contour for rect in rectangles]
     except Exception:
-        print("Could not find gauntlet. Exception: ")
-        traceback.print_exc()
+        #print("Could not find gauntlet. Exception: ")
+        #traceback.print_exc()
         return None, [rect.contour for rect in rectangles]
 
 def identifyContours(contours):
@@ -535,7 +538,7 @@ def identifyTapeStrip(contours):
             reprAngle = abs(angleDiff(vec1.angle, vec2.angle))
             reprCircle = Circle(thisPoint[0], thisPoint[1], 10)
 
-            if reprAngle > pi / 3:
+            if reprAngle > 3*pi / 8:
                 contObj.assignDescriptor("T")
             else:
                 contObj.assignDescriptor("Y")
@@ -549,7 +552,7 @@ def identifyTapeStrip(contours):
 def shiftImageCoords(img, coord):
     imgWidth = img.shape[1]
     imgHeight = img.shape[0]
-    return (int(round(coord[0] - imgWidth/2)), int(round(imgHeight/2 - coord[1])))
+    return (int(round(coord[0] - imgWidth/2))+25, int(round(imgHeight/2 - coord[1])))
 
 def autoCanny(image, sigma=0.333):
     # compute the median of the single channel pixel intensities
