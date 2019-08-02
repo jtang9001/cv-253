@@ -10,7 +10,7 @@ TAPE_TO_HOLE_RATIO = 1.35
 
 PREP_GAUSS_SIZE = 11
 PREP_ADAPTIVE_BIN_SIZE = 101
-PREP_ADAPTIVE_EXPOSURE = 45
+PREP_ADAPTIVE_EXPOSURE = 30
 BINARIZATION_THRESHOLD = 100
 
 ENCIRCLE_MIN_R = 50
@@ -328,8 +328,9 @@ class Gauntlet:
 
             self.refVector = PolarVector(self.center, self.avgR, self.refAngle)
             
+            
             self.rects = [rect for rect in self.rects \
-                if not pi/6 < angleDiffCW(self.refVector, rect.vector.angle) < 5*pi/6
+                if not -5*pi/6 < angleDiffCW(self.refVector.angle, rect.vector.angle) < -1*pi/6
             ]
                 
         
@@ -487,7 +488,7 @@ def getGauntlet(contours):
         return gauntlet, [rect.contour for rect in rectangles]
     except Exception:
         #print("Could not find gauntlet. Exception: ")
-        #traceback.print_exc()
+        traceback.print_exc()
         return None, [rect.contour for rect in rectangles]
 
 def identifyContours(contours):
