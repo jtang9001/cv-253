@@ -8,7 +8,7 @@ from math import pi
 #configuration constants
 TAPE_TO_HOLE_RATIO = 1.35
 
-PREP_GAUSS_SIZE = 11
+PREP_GAUSS_SIZE = 3
 PREP_ADAPTIVE_BIN_SIZE = 101
 PREP_ADAPTIVE_EXPOSURE = 30
 BINARIZATION_THRESHOLD = 100
@@ -21,9 +21,9 @@ ENCIRCLE_MAX_RECTS = 8
 REF_VECT_MAX_CW_DIFF = -5*pi/6
 REF_VECT_MIN_CW_DIFF = -1*pi/6
 
-HOUGH_CIRCLE_THRESH = 120 # larger means less circles detected
+HOUGH_CIRCLE_THRESH = 130 # larger means less circles detected
 HOUGH_ACCUM_RES = 1.5 #larger means less resolution in accumulator
-HOUGH_MIN_SEPARATION = 20
+HOUGH_MIN_SEPARATION = 50
 HOUGH_MIN_R = 50
 HOUGH_MAX_R = 150
 
@@ -36,7 +36,7 @@ TAPE_STRIP_MAX_ANGLE = 5*pi/8
 TAPE_STRIP_ANGLE_THRESH = 3*pi/8
 
 PERS_X_OFFSET = 100
-PERS_Y_OFFSET = 100
+PERS_Y_OFFSET = 115
 ADDL_X_OFFSET = 30
 
 RECT_MIN_AR = 1.4 #min aspect ratio
@@ -103,7 +103,7 @@ class Circle:
     def serialWrite(self, img, serialObject):
         coords = shiftImageCoords(img, self.center, ADDL_X_OFFSET)
         dataStr = "P{},{};\n".format(*coords)
-        #print(dataStr)
+        print(dataStr)
         serialObject.write(dataStr.encode("ascii", "ignore"))
         
 class ThreePointCircle(Circle):
@@ -501,7 +501,7 @@ def getGauntlet(contours):
         return gauntlet, [rect.contour for rect in rectangles]
     except Exception:
         #print("Could not find gauntlet. Exception: ")
-        traceback.print_exc()
+        #traceback.print_exc()
         return None, [rect.contour for rect in rectangles]
 
 def identifyContours(contours):
