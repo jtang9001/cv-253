@@ -99,14 +99,15 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         
         if lastGoodIsect is not None:
             #print("{};".format(lastGoodIsect))
-            ser.write("{};".format(lastGoodIsect).encode("ascii", "ignore"))
+            ser.write("{};\n".format(lastGoodIsect).encode("ascii", "ignore"))
 
         if circles is not None:
-            dispImg = cv2.cvtColor(houghImg, cv2.COLOR_GRAY2BGR)
+            dispImg = cv2.cvtColor(alg.autoCanny(houghImg), cv2.COLOR_GRAY2BGR)
             circles[0].draw(dispImg)
             circles[0].serialWrite(houghImg, ser)
             
-            
+        
+        #dispImg = cv2.cvtColor(houghImg, cv2.COLOR_GRAY2BGR)
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
         

@@ -21,11 +21,11 @@ ENCIRCLE_MAX_RECTS = 8
 REF_VECT_MAX_CW_DIFF = -5*pi/6
 REF_VECT_MIN_CW_DIFF = -1*pi/6
 
-HOUGH_CIRCLE_THRESH = 130 # larger means less circles detected
-HOUGH_ACCUM_RES = 1.5 #larger means less resolution in accumulator
-HOUGH_MIN_SEPARATION = 50
+HOUGH_CIRCLE_THRESH = 140 # larger means less circles detected
+HOUGH_ACCUM_RES = 1.3 #larger means less resolution in accumulator
+HOUGH_MIN_SEPARATION = 20
 HOUGH_MIN_R = 50
-HOUGH_MAX_R = 150
+HOUGH_MAX_R = 115
 
 TAPE_STRIP_MIN_LINE_RATIO = 0.05
 TAPE_STRIP_POINT_MARGIN = 0.02
@@ -35,9 +35,9 @@ TAPE_STRIP_MIN_ANGLE = pi/5
 TAPE_STRIP_MAX_ANGLE = 5*pi/8
 TAPE_STRIP_ANGLE_THRESH = 3*pi/8
 
-PERS_X_OFFSET = 100
-PERS_Y_OFFSET = 115
-ADDL_X_OFFSET = 30
+PERS_X_OFFSET = 85
+PERS_Y_OFFSET = 95
+ADDL_X_OFFSET = 50
 
 RECT_MIN_AR = 1.4 #min aspect ratio
 RECT_MAX_AR = 2.5 #max aspect ratio
@@ -46,7 +46,7 @@ RECT_MAX_AREA_PCT = 0.003
 RECT_MIN_BBOX_FILL = 0.8 #min pct that rect contour fills its minimal bounding box
 
 POLY_APPROX_COEFF = 0.04
-DEFAULT_IMG_X_OFFSET = 25
+DEFAULT_IMG_X_OFFSET = 40
 IMGRES = (640,480)
 IMGWIDTH = IMGRES[0]
 IMGHEIGHT = IMGRES[1]
@@ -100,11 +100,16 @@ class Circle:
             ( int(round(self.x)), int(round(self.y)) ), 
             int(round(self.r)), 
             color, thickness)
+        cv2.putText(
+            img, "{:.2f}".format(self.r),
+            ( int(round(self.x)), int(round(self.y)) ),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.75, ORANGE, 1
+        )
         
     def serialWrite(self, img, serialObject):
         coords = shiftImageCoords(img, self.center, ADDL_X_OFFSET)
         dataStr = "P{},{};\n".format(*coords)
-        print(dataStr)
+        print(dataStr, self.r)
         serialObject.write(dataStr.encode("ascii", "ignore"))
         
 class ThreePointCircle(Circle):
@@ -436,7 +441,7 @@ def findCircles(img):
     houghResults = cv2.HoughCircles(
         img, cv2.HOUGH_GRADIENT, 
         HOUGH_ACCUM_RES, HOUGH_MIN_SEPARATION,
-        param1 = autoCannyUpper(img),
+        param1 = 155,
         param2 = HOUGH_CIRCLE_THRESH,
         minRadius = HOUGH_MIN_R,
         maxRadius = HOUGH_MAX_R
@@ -582,6 +587,7 @@ def autoCanny(image, sigma=0.333):
  
     # return the edged image
     return edged
+
 
 def autoCannyUpper(image, sigma = 0.333):
     # compute the median of the single channel pixel intensities
