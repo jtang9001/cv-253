@@ -47,7 +47,10 @@ TEMPLATE = cv2.cvtColor(TEMPLATE, cv2.COLOR_BGR2GRAY)
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     startTime = time.time()
     if ser.in_waiting > 0:
-        line = ser.readline()
+        line = ser.readline().decode('ascii')
+        if "~" in line.decode() and lastGoodIsect is not None:
+            print("Received serial request to print intersection type")
+            ser.write("{}".format(lastGoodIsect).encode("ascii", "ignore"))
         print(time.strftime("%H:%M:%S"), line)
     
     try:
@@ -97,9 +100,8 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             tapeCnt.draw(dispImg)
             reprCircle.draw(dispImg)
         
-        if lastGoodIsect is not None:
-            #print("{};".format(lastGoodIsect))
-            ser.write("{};\n".format(lastGoodIsect).encode("ascii", "ignore"))
+        
+            
 
         if circles is not None:
             dispImg = cv2.cvtColor(alg.autoCanny(houghImg), cv2.COLOR_GRAY2BGR)

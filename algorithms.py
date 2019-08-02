@@ -101,7 +101,7 @@ class Circle:
             int(round(self.r)), 
             color, thickness)
         cv2.putText(
-            img, "{:.2f}".format(self.r),
+            img, "{:.2f},{:.2f}".format(self.x, self.y),
             ( int(round(self.x)), int(round(self.y)) ),
             cv2.FONT_HERSHEY_SIMPLEX, 0.75, ORANGE, 1
         )
@@ -109,7 +109,7 @@ class Circle:
     def serialWrite(self, img, serialObject):
         coords = shiftImageCoords(img, self.center, ADDL_X_OFFSET)
         dataStr = "P{},{};\n".format(*coords)
-        print(dataStr, self.r)
+        #print(dataStr, self.r)
         serialObject.write(dataStr.encode("ascii", "ignore"))
         
 class ThreePointCircle(Circle):
