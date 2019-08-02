@@ -46,6 +46,7 @@ RECT_MAX_AREA_PCT = 0.003
 RECT_MIN_BBOX_FILL = 0.8 #min pct that rect contour fills its minimal bounding box
 
 POLY_APPROX_COEFF = 0.04
+DEFAULT_IMG_X_OFFSET = 25
 IMGRES = (640,480)
 IMGWIDTH = IMGRES[0]
 IMGHEIGHT = IMGRES[1]
@@ -565,7 +566,7 @@ def identifyTapeStrip(contours):
 
     return contObj, reprCircle
 
-def shiftImageCoords(img, coord, offset = 25):
+def shiftImageCoords(img, coord, offset = DEFAULT_IMG_X_OFFSET):
     imgWidth = img.shape[1]
     imgHeight = img.shape[0]
     return (int(round(coord[0] - imgWidth/2))+offset, int(round(imgHeight/2 - coord[1])))
