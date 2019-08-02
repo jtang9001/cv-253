@@ -18,14 +18,26 @@ ENCIRCLE_MAX_R = 120
 ENCIRCLE_RECT_DIST_DEV = 0.3
 ENCIRCLE_MAX_RECTS = 8
 
+REF_VECT_MAX_CW_DIFF = -5*pi/6
+REF_VECT_MIN_CW_DIFF = -1*pi/6
+
 HOUGH_CIRCLE_THRESH = 120 # larger means less circles detected
 HOUGH_ACCUM_RES = 1.5 #larger means less resolution in accumulator
 HOUGH_MIN_SEPARATION = 20
 HOUGH_MIN_R = 50
 HOUGH_MAX_R = 150
 
+TAPE_STRIP_MIN_LINE_RATIO = 0.05
+TAPE_STRIP_POINT_MARGIN = 0.02
+TAPE_STRIP_POLY_COEFF = 0.005
+TAPE_STRIP_MIN_Y = 240
+TAPE_STRIP_MIN_ANGLE = pi/5
+TAPE_STRIP_MAX_ANGLE = 5*pi/8
+TAPE_STRIP_ANGLE_THRESH = 3*pi/8
+
 PERS_X_OFFSET = 100
 PERS_Y_OFFSET = 100
+ADDL_X_OFFSET = 30
 
 RECT_MIN_AR = 1.4 #min aspect ratio
 RECT_MAX_AR = 2.5 #max aspect ratio
@@ -89,7 +101,7 @@ class Circle:
             color, thickness)
         
     def serialWrite(self, img, serialObject):
-        coords = shiftImageCoords(img, self.center)
+        coords = shiftImageCoords(img, self.center, ADDL_X_OFFSET)
         dataStr = "P{},{};\n".format(*coords)
         #print(dataStr)
         serialObject.write(dataStr.encode("ascii", "ignore"))
@@ -330,7 +342,8 @@ class Gauntlet:
             
             
             self.rects = [rect for rect in self.rects \
-                if not -5*pi/6 < angleDiffCW(self.refVector.angle, rect.vector.angle) < -1*pi/6
+                if not REF_VECT_MAX_CW_DIFF < angleDiffCW(self.refVector.angle, rect.vector.angle) \
+                 < REF_VECT_MIN_CW_DIFF
             ]
                 
         
@@ -517,9 +530,9 @@ def identifyContours(contours):
 def identifyTapeStrip(contours):
     largestCont = max(contours, key = lambda contour: cv2.arcLength(contour, True))
     contObj = TapePoly(largestCont)
-    contObj.simplifyContour(simplifyCoeff = 0.005)
+    contObj.simplifyContour(simplifyCoeff = TAPE_STRIP_POLY_COEFF)
     reprAngle = pi
-    reprCircle = Circle(0, 240, 3) # only start counting vertices in lower half of image
+    reprCircle = Circle(0, TAPE_STRIP_MIN_Y, 3) # only start counting vertices in lower half of image
 
     for i in range(contObj.numVertices):
         prevPoint = contObj.contour[ (i-1) % contObj.numVertices ][0]
@@ -530,18 +543,18 @@ def identifyTapeStrip(contours):
         vec2 = Vector(thisPoint, nextPoint)
 
         if any((
-            vec1.magnitude < 0.05*IMGWIDTH,
-            vec2.magnitude < 0.05*IMGWIDTH,
-            isPointOffEdge(thisPoint, margin = 0.02)
+            vec1.magnitude < TAPE_STRIP_MIN_LINE_RATIO*IMGWIDTH,
+            vec2.magnitude < TAPE_STRIP_MIN_LINE_RATIO*IMGWIDTH,
+            isPointOffEdge(thisPoint, margin = TAPE_STRIP_POINT_MARGIN)
         )):
             continue
         
-        if (pi/5 < abs(angleDiff(vec1.angle, vec2.angle)) < 5*pi/8
+        if (TAPE_STRIP_MIN_ANGLE < abs(angleDiff(vec1.angle, vec2.angle)) < TAPE_STRIP_MAX_ANGLE
             and thisPoint[1] > reprCircle.y):
             reprAngle = abs(angleDiff(vec1.angle, vec2.angle))
             reprCircle = Circle(thisPoint[0], thisPoint[1], 10)
 
-            if reprAngle > 3*pi / 8:
+            if reprAngle > TAPE_STRIP_ANGLE_THRESH:
                 contObj.assignDescriptor("T")
             else:
                 contObj.assignDescriptor("Y")
@@ -552,10 +565,10 @@ def identifyTapeStrip(contours):
 
     return contObj, reprCircle
 
-def shiftImageCoords(img, coord):
+def shiftImageCoords(img, coord, offset = 25):
     imgWidth = img.shape[1]
     imgHeight = img.shape[0]
-    return (int(round(coord[0] - imgWidth/2))+25, int(round(imgHeight/2 - coord[1])))
+    return (int(round(coord[0] - imgWidth/2))+offset, int(round(imgHeight/2 - coord[1])))
 
 def autoCanny(image, sigma=0.333):
     # compute the median of the single channel pixel intensities
