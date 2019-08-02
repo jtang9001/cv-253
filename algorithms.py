@@ -328,7 +328,9 @@ class Gauntlet:
 
             self.refVector = PolarVector(self.center, self.avgR, self.refAngle)
             
-            for rect in self.rects:
+            self.rects = [rect for rect in self.rects \
+                if not pi/6 < angleDiffCW(self.refVector, rect.vector.angle) < 5*pi/6
+            ]
                 
         
         except AttributeError:
