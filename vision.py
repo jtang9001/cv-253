@@ -49,7 +49,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     if ser.in_waiting > 0:
         line = ser.readline().decode('ascii')
         if "~" in line and lastGoodIsect is not None:
-            print("Received serial request to print intersection type")
+            print("Received serial request to print {}".format(lastGoodIsect))
             ser.write("{}".format(lastGoodIsect).encode("ascii", "ignore"))
         print(time.strftime("%H:%M:%S"), line)
     
