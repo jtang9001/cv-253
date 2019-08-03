@@ -30,7 +30,7 @@ HOUGH_MAX_R = 115
 TAPE_STRIP_MIN_LINE_RATIO = 0.05
 TAPE_STRIP_POINT_MARGIN = 0.02
 TAPE_STRIP_POLY_COEFF = 0.005
-TAPE_STRIP_MIN_Y = 240
+TAPE_STRIP_MIN_Y = 150
 TAPE_STRIP_MIN_ANGLE = pi/5
 TAPE_STRIP_MAX_ANGLE = 5*pi/8
 TAPE_STRIP_ANGLE_THRESH = 3*pi/8
@@ -101,7 +101,7 @@ class Circle:
             int(round(self.r)), 
             color, thickness)
         cv2.putText(
-            img, "{:.2f},{:.2f}".format(self.x, self.y),
+            img, "{:.2f}".format(self.r),
             ( int(round(self.x)), int(round(self.y)) ),
             cv2.FONT_HERSHEY_SIMPLEX, 0.75, ORANGE, 1
         )
