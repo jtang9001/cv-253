@@ -62,7 +62,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         # resRect.draw(dispImg)
 
         imageCnts = alg.getContours(processedImg)
-        tapeCnt = alg.identifyTapeStrip(imageCnts)
+        tapeCnt = alg.classifyIsect(imageCnts)
         gauntletObj, rectContours = alg.getGauntlet(imageCnts)
         
         if gauntletObj is not None:
