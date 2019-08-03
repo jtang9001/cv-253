@@ -46,7 +46,7 @@ TEMPLATE = cv2.cvtColor(TEMPLATE, cv2.COLOR_BGR2GRAY)
 # capture frames from the camera
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     startTime = time.time()
-    if ser.in_waiting > 0:
+    while ser.in_waiting > 0:
         line = ser.readline().decode('ascii')
         print(datetime.datetime.now().strftime("%H:%M:%S.%f"), line)
     

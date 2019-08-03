@@ -16,9 +16,9 @@ IMGAREA = IMGRES[0] * IMGRES[1]
 
 TAPE_TO_HOLE_RATIO = 1.35
 
-PREP_GAUSS_SIZE = 5
+PREP_GAUSS_SIZE = 7
 PREP_ADAPTIVE_BIN_SIZE = 101
-PREP_ADAPTIVE_EXPOSURE = 30
+PREP_ADAPTIVE_EXPOSURE = 20
 BINARIZATION_THRESHOLD = 100
 
 ENCIRCLE_MIN_R = 50
@@ -36,10 +36,10 @@ HOUGH_MIN_R = 50
 HOUGH_MAX_R = 115
 
 TAPE_STRIP_MIN_LINE_RATIO = 0.05
-TAPE_STRIP_POINT_MARGIN = 0.02
-TAPE_STRIP_X_MARGIN = 0.5 #percentage of center to consider intersections in
-TAPE_STRIP_X_LEFT = int(IMGWIDTH / 2 - TAPE_STRIP_X_MARGIN/2*(IMGWIDTH/2))
-TAPE_STRIP_X_RIGHT = int(IMGWIDTH / 2 + TAPE_STRIP_X_MARGIN/2*(IMGWIDTH/2))
+TAPE_STRIP_POINT_MARGIN = 0.2
+TAPE_STRIP_X_MARGIN = 0.35 #percentage of center to consider intersections in
+TAPE_STRIP_X_LEFT = int(IMGWIDTH/2 - TAPE_STRIP_X_MARGIN/2*(IMGWIDTH/2))
+TAPE_STRIP_X_RIGHT = int(IMGWIDTH/2 + TAPE_STRIP_X_MARGIN/2*(IMGWIDTH/2))
 TAPE_STRIP_POLY_COEFF = 0.005
 TAPE_STRIP_MIN_Y = 200
 TAPE_STRIP_MIN_ANGLE = pi/5
@@ -380,7 +380,7 @@ class Gauntlet:
                     frame,
                     #"{:.3f}".format(rect.aspectRatio),
                     #"{:.3}".format(rect.contourArea / IMGAREA),
-                    #"{},{}".format(*shiftImageCoords(frame, rect.intrinsicVector.end)),
+                    "{},{}".format(*shiftImageCoords(frame, rect.intrinsicVector.end)),
                     (int(rect.center[0]), int(rect.center[1])),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.75, ORANGE, 1
@@ -438,7 +438,7 @@ def preprocessFrame(frame):
 
     #edgedImg = autoCanny(blurredImg)
     
-    frame = cv2.cvtColor(greyImg, cv2.COLOR_GRAY2BGR)
+    frame = cv2.cvtColor(threshedImg, cv2.COLOR_GRAY2BGR)
     return threshedImg, blurredImg, frame
 
 def findCircles(img):
