@@ -89,6 +89,9 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
                 print("Print to serial Isect type {}".format(tapeCnt.descriptor))
                 ser.write(tapeCnt.descriptor.encode("ascii", "ignore"))
 
+    except AssertionError as e:
+        print("Failed assertion", e)
+        pass
     except Exception:
         traceback.print_exc()
         pass

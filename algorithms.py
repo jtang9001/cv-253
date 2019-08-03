@@ -114,7 +114,7 @@ class Circle:
     def serialWrite(self, img, serialObject):
         coords = shiftImageCoords(img, self.center, ADDL_X_OFFSET)
         dataStr = "P{},{};\n".format(*coords)
-        #print(dataStr, self.r)
+        #print(dataStr)
         serialObject.write(dataStr.encode("ascii", "ignore"))
         
 class ThreePointCircle(Circle):
@@ -315,16 +315,12 @@ class Gauntlet:
         self.avgR = np.mean([circle.r for circle in self.circles])
         self.center = (centerX, centerY)
         self.centerCircle = Circle(centerX, centerY, self.avgR)
-
-        #print("Before encircling rects, there were {} rects".format(len(self.rects)))
         
         self.rects = [
             rect for rect in self.rects \
                 if (1-ENCIRCLE_RECT_DIST_DEV)*self.avgR < dist(rect.center, self.center) \
                 < (1+ENCIRCLE_RECT_DIST_DEV)*self.avgR
         ]
-
-        #print("After encircling rects, {} rects remain".format(len(self.rects)))
 
     def assignRadialVectors(self):
         assert hasattr(self, "center")
@@ -383,7 +379,7 @@ class Gauntlet:
                 cv2.putText(
                     frame,
                     #"{:.3f}".format(rect.aspectRatio),
-                    "{:.3}".format(rect.contourArea / IMGAREA),
+                    #"{:.3}".format(rect.contourArea / IMGAREA),
                     #"{},{}".format(*shiftImageCoords(frame, rect.intrinsicVector.end)),
                     (int(rect.center[0]), int(rect.center[1])),
                     cv2.FONT_HERSHEY_SIMPLEX,
@@ -411,7 +407,7 @@ class Gauntlet:
             coords = shiftImageCoords(img, rect.intrinsicVector.end)
             dataStr += "{},{};".format(*coords)
         dataStr += "\n"
-        print(dataStr)
+        #print(dataStr)
         serialObject.write(dataStr.encode("ascii", "ignore"))
 
 hsvLower = (0,0,0)
