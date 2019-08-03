@@ -2,6 +2,7 @@
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 import time
+import datetime
 import cv2
 import numpy as np
 import algorithms as alg
@@ -36,10 +37,9 @@ rawCapture = PiRGBArray(camera, size=res)
 time.sleep(0.25)
 
 lastGoodGauntlet = None
+lastIsect = "N"
 circles = None
 tapeCnt = None
-reprCircle = None
-lastGoodIsect = None
 TEMPLATE = cv2.imread("template.png")
 TEMPLATE = cv2.cvtColor(TEMPLATE, cv2.COLOR_BGR2GRAY)
 
@@ -48,10 +48,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     startTime = time.time()
     if ser.in_waiting > 0:
         line = ser.readline().decode('ascii')
-        if "~" in line and lastGoodIsect is not None:
-            print("Received serial request to print {}".format(lastGoodIsect))
-            ser.write("{}".format(lastGoodIsect).encode("ascii", "ignore"))
-        print(time.strftime("%H:%M:%S"), line)
+        print(datetime.datetime.now().strftime("%H:%M:%S.%f"), line)
     
     try:
         # grab the raw NumPy array representing the image, then initialize the timestamp
@@ -65,51 +62,38 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         # resRect.draw(dispImg)
 
         imageCnts = alg.getContours(processedImg)
+        tapeCnt = alg.identifyTapeStrip(imageCnts)
         gauntletObj, rectContours = alg.getGauntlet(imageCnts)
         
         if gauntletObj is not None:
             if len(gauntletObj.rects) == 6:
-                lastGoodGauntlet = gauntletObj
+                gauntletObj.draw(dispImg)
                 gauntletObj.serialWrite(processedImg, ser)
             circles = None
-            tapeCnt = None
-            reprCircle = None
-            lastGoodIsect = None
         else:
-            houghImg = alg.undistortPerspective(houghImg)
-            circles = alg.findCircles(houghImg)
-            tapeCnt, reprCircle = alg.identifyTapeStrip(imageCnts)
-            if tapeCnt is not None:
-                lastGoodIsect = tapeCnt.descriptor
-            #dispImg = cv2.cvtColor(dispImg, cv2.COLOR_GRAY2BGR)
+            dispImg = alg.undistortPerspective(houghImg)
+            circles = alg.findCircles(dispImg)
+            dispImg = cv2.cvtColor(dispImg, cv2.COLOR_GRAY2BGR)
 
-            
-            
+        if circles is not None:
+            circles[0].draw(dispImg)
+            circles[0].serialWrite(houghImg, ser)
+
+        if tapeCnt.descriptor != "N":
+            tapeCnt.draw(dispImg)
+
+        if lastIsect != tapeCnt.descriptor:
+            lastIsect = tapeCnt.descriptor
+            if tapeCnt.descriptor != "N":
+                print("Print to serial Isect type {}".format(tapeCnt.descriptor))
+                ser.write(tapeCnt.descriptor.encode("ascii", "ignore"))
+
     except Exception:
-        #traceback.print_exc()
+        traceback.print_exc()
         pass
     finally:
         # dispImg = cv2.cvtColor(dispImg, cv2.COLOR_GRAY2BGR)
-        cv2.drawContours(dispImg, imageCnts, -1, alg.VIOLET, 1)
-
-        if lastGoodGauntlet is not None and circles is None:
-            lastGoodGauntlet.draw(dispImg)
-            
-        if tapeCnt is not None:
-            
-            tapeCnt.draw(dispImg)
-            reprCircle.draw(dispImg)
-        
-        
-            
-
-        if circles is not None:
-            dispImg = cv2.cvtColor(alg.autoCanny(houghImg), cv2.COLOR_GRAY2BGR)
-            circles[0].draw(dispImg)
-            circles[0].serialWrite(houghImg, ser)
-            
-        
-        #dispImg = cv2.cvtColor(houghImg, cv2.COLOR_GRAY2BGR)
+        # cv2.drawContours(dispImg, imageCnts, -1, alg.VIOLET, 1)
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
         

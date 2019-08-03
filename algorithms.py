@@ -6,6 +6,14 @@ import traceback
 from math import pi
 
 #configuration constants
+
+POLY_APPROX_COEFF = 0.04
+DEFAULT_IMG_X_OFFSET = 40
+IMGRES = (640,480)
+IMGWIDTH = IMGRES[0]
+IMGHEIGHT = IMGRES[1]
+IMGAREA = IMGRES[0] * IMGRES[1]
+
 TAPE_TO_HOLE_RATIO = 1.35
 
 PREP_GAUSS_SIZE = 11
@@ -29,6 +37,9 @@ HOUGH_MAX_R = 115
 
 TAPE_STRIP_MIN_LINE_RATIO = 0.05
 TAPE_STRIP_POINT_MARGIN = 0.02
+TAPE_STRIP_X_MARGIN = 0.5 #percentage of center to consider intersections in
+TAPE_STRIP_X_LEFT = int(IMGWIDTH / 2 - TAPE_STRIP_X_MARGIN/2*(IMGWIDTH/2))
+TAPE_STRIP_X_RIGHT = int(IMGWIDTH / 2 + TAPE_STRIP_X_MARGIN/2*(IMGWIDTH/2))
 TAPE_STRIP_POLY_COEFF = 0.005
 TAPE_STRIP_MIN_Y = 240
 TAPE_STRIP_MIN_ANGLE = pi/5
@@ -45,12 +56,6 @@ RECT_MIN_AREA_PCT = 0.00075
 RECT_MAX_AREA_PCT = 0.003
 RECT_MIN_BBOX_FILL = 0.8 #min pct that rect contour fills its minimal bounding box
 
-POLY_APPROX_COEFF = 0.04
-DEFAULT_IMG_X_OFFSET = 40
-IMGRES = (640,480)
-IMGWIDTH = IMGRES[0]
-IMGHEIGHT = IMGRES[1]
-IMGAREA = IMGRES[0] * IMGRES[1]
 
 #standardized color tuples
 #openCV uses BGR
@@ -202,8 +207,10 @@ class TapeRect:
     def drawBB(self, frame):
         cv2.drawContours(frame, [self.boundingBoxContour], -1, GREEN, 2)
 
-class TapePoly(TapeRect):
+class IsectPoly(TapeRect):
     def __init__(self, contour):
+        self.descriptor = "N"
+        self.charCircle = None
         super().__init__(contour)
     
     def simplifyContour(self, simplifyCoeff = POLY_APPROX_COEFF):
@@ -225,8 +232,9 @@ class TapePoly(TapeRect):
 
         self.angle = degToRad(self.angle)
 
-    def assignDescriptor(self, descriptor):
+    def assignDescriptor(self, descriptor, charCircle):
         self.descriptor = descriptor
+        self.charCircle = circle
 
     def draw(self, frame):
         cv2.drawContours(frame, [self.contour], -1, GREEN, 2)
@@ -234,10 +242,11 @@ class TapePoly(TapeRect):
             cv2.putText(
                 frame,
                 "{}".format(self.descriptor),
-                (int(self.center[0]), int(self.center[1])),
+                (int(self.charCircle.center[0]), int(self.charCircle.center[1])),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.75, ORANGE, 2
             )
+            self.charCircle.draw(frame)
 
 class Gauntlet:
     def __init__(self, rectObjs):
@@ -533,7 +542,7 @@ def identifyContours(contours):
 
     return rectangles
 
-def identifyTapeStrip(contours):
+def classifyIsect(contours):
     largestCont = max(contours, key = lambda contour: cv2.arcLength(contour, True))
     contObj = TapePoly(largestCont)
     contObj.simplifyContour(simplifyCoeff = TAPE_STRIP_POLY_COEFF)
@@ -555,8 +564,11 @@ def identifyTapeStrip(contours):
         )):
             continue
         
-        if (TAPE_STRIP_MIN_ANGLE < abs(angleDiff(vec1.angle, vec2.angle)) < TAPE_STRIP_MAX_ANGLE
-            and thisPoint[1] > reprCircle.y):
+        if all((
+            TAPE_STRIP_MIN_ANGLE < abs(angleDiff(vec1.angle, vec2.angle)) < TAPE_STRIP_MAX_ANGLE,
+            thisPoint[1] > reprCircle.y,
+            TAPE_STRIP_X_LEFT < thisPoint[0] < TAPE_STRIP_X_RIGHT
+            )):
             reprAngle = abs(angleDiff(vec1.angle, vec2.angle))
             reprCircle = Circle(thisPoint[0], thisPoint[1], 10)
 
@@ -565,11 +577,8 @@ def identifyTapeStrip(contours):
             else:
                 contObj.assignDescriptor("Y")
 
-    if reprAngle == pi:
-        contObj = None
-        reprCircle = None
-
-    return contObj, reprCircle
+    
+    return contObj
 
 def shiftImageCoords(img, coord, offset = DEFAULT_IMG_X_OFFSET):
     imgWidth = img.shape[1]
@@ -587,7 +596,6 @@ def autoCanny(image, sigma=0.333):
  
     # return the edged image
     return edged
-
 
 def autoCannyUpper(image, sigma = 0.333):
     # compute the median of the single channel pixel intensities
