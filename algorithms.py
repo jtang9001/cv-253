@@ -16,7 +16,7 @@ IMGAREA = IMGRES[0] * IMGRES[1]
 
 TAPE_TO_HOLE_RATIO = 1.35
 
-PREP_GAUSS_SIZE = 11
+PREP_GAUSS_SIZE = 5
 PREP_ADAPTIVE_BIN_SIZE = 101
 PREP_ADAPTIVE_EXPOSURE = 30
 BINARIZATION_THRESHOLD = 100
@@ -29,7 +29,7 @@ ENCIRCLE_MAX_RECTS = 8
 REF_VECT_MAX_CW_DIFF = -5*pi/6
 REF_VECT_MIN_CW_DIFF = -1*pi/6
 
-HOUGH_CIRCLE_THRESH = 140 # larger means less circles detected
+HOUGH_CIRCLE_THRESH = 125 # larger means less circles detected
 HOUGH_ACCUM_RES = 1.3 #larger means less resolution in accumulator
 HOUGH_MIN_SEPARATION = 20
 HOUGH_MIN_R = 50
@@ -41,7 +41,7 @@ TAPE_STRIP_X_MARGIN = 0.5 #percentage of center to consider intersections in
 TAPE_STRIP_X_LEFT = int(IMGWIDTH / 2 - TAPE_STRIP_X_MARGIN/2*(IMGWIDTH/2))
 TAPE_STRIP_X_RIGHT = int(IMGWIDTH / 2 + TAPE_STRIP_X_MARGIN/2*(IMGWIDTH/2))
 TAPE_STRIP_POLY_COEFF = 0.005
-TAPE_STRIP_MIN_Y = 150
+TAPE_STRIP_MIN_Y = 200
 TAPE_STRIP_MIN_ANGLE = pi/5
 TAPE_STRIP_MAX_ANGLE = 5*pi/8
 TAPE_STRIP_ANGLE_THRESH = 3*pi/8
@@ -234,7 +234,7 @@ class IsectPoly(TapeRect):
 
     def assignDescriptor(self, descriptor, charCircle):
         self.descriptor = descriptor
-        self.charCircle = circle
+        self.charCircle = charCircle
 
     def draw(self, frame):
         cv2.drawContours(frame, [self.contour], -1, GREEN, 2)
@@ -544,7 +544,7 @@ def identifyContours(contours):
 
 def classifyIsect(contours):
     largestCont = max(contours, key = lambda contour: cv2.arcLength(contour, True))
-    contObj = TapePoly(largestCont)
+    contObj = IsectPoly(largestCont)
     contObj.simplifyContour(simplifyCoeff = TAPE_STRIP_POLY_COEFF)
     reprAngle = pi
     reprCircle = Circle(0, TAPE_STRIP_MIN_Y, 3) # only start counting vertices in lower half of image
@@ -573,9 +573,9 @@ def classifyIsect(contours):
             reprCircle = Circle(thisPoint[0], thisPoint[1], 10)
 
             if reprAngle > TAPE_STRIP_ANGLE_THRESH:
-                contObj.assignDescriptor("T")
+                contObj.assignDescriptor("T", reprCircle)
             else:
-                contObj.assignDescriptor("Y")
+                contObj.assignDescriptor("Y", reprCircle)
 
     
     return contObj
