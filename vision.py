@@ -62,7 +62,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         # resRect.draw(dispImg)
 
         imageCnts = alg.getContours(processedImg)
-        tapeCnt = alg.classifyIsect(imageCnts)
+        #tapeCnt = alg.classifyIsect(imageCnts)
         gauntletObj, rectContours = alg.getGauntlet(imageCnts)
         
         if gauntletObj is not None:
@@ -80,14 +80,14 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             circles[0].draw(dispImg)
             circles[0].serialWrite(houghImg, ser)
 
-        if tapeCnt.descriptor != "N":
-            tapeCnt.draw(dispImg)
+        # if tapeCnt.descriptor != "N":
+        #     tapeCnt.draw(dispImg)
 
-        if lastIsect != tapeCnt.descriptor:
-            lastIsect = tapeCnt.descriptor
-            if tapeCnt.descriptor != "N":
-                print("Print to serial Isect type {}".format(tapeCnt.descriptor))
-                ser.write(tapeCnt.descriptor.encode("ascii", "ignore"))
+        # if lastIsect != tapeCnt.descriptor:
+        #     lastIsect = tapeCnt.descriptor
+        #     if tapeCnt.descriptor != "N":
+        #         print("Print to serial Isect type {}".format(tapeCnt.descriptor))
+        #         ser.write(tapeCnt.descriptor.encode("ascii", "ignore"))
 
     except AssertionError as e:
         print("Failed assertion", e)
