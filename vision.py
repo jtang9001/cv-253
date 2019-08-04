@@ -46,11 +46,11 @@ TEMPLATE = cv2.cvtColor(TEMPLATE, cv2.COLOR_BGR2GRAY)
 # capture frames from the camera
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     startTime = time.time()
-    while ser.in_waiting > 0:
-        line = ser.readline().decode('ascii')
-        print(datetime.datetime.now().strftime("%H:%M:%S.%f"), line)
     
     try:
+        while ser.in_waiting > 0:
+            line = ser.readline().decode('ascii')
+            print(datetime.datetime.now().strftime("%H:%M:%S.%f"), line)
         # grab the raw NumPy array representing the image, then initialize the timestamp
         # and occupied/unoccupied text
         originalImg = frame.array
@@ -69,7 +69,10 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             if len(gauntletObj.rects) == 6:
                 gauntletObj.draw(dispImg)
                 gauntletObj.serialWrite(processedImg, ser)
+            elif 3 <= len(gauntletObj.rects) < 6:
+                gauntletObj.draw(dispImg)
             circles = None
+            cv2.drawContours(dispImg, imageCnts, -1, alg.VIOLET, 1)
         else:
             houghImg = alg.undistortPerspective(houghImg)
             circles = alg.findCircles(houghImg)
@@ -97,7 +100,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         pass
     finally:
         # dispImg = cv2.cvtColor(dispImg, cv2.COLOR_GRAY2BGR)
-        # cv2.drawContours(dispImg, imageCnts, -1, alg.VIOLET, 1)
+        
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
         

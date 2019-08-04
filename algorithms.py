@@ -8,7 +8,7 @@ from math import pi
 #configuration constants
 
 POLY_APPROX_COEFF = 0.04
-DEFAULT_IMG_X_OFFSET = 40
+DEFAULT_IMG_X_OFFSET = -35
 IMGRES = (640,480)
 IMGWIDTH = IMGRES[0]
 IMGHEIGHT = IMGRES[1]
@@ -29,7 +29,7 @@ ENCIRCLE_MAX_RECTS = 8
 REF_VECT_MAX_CW_DIFF = -5*pi/6
 REF_VECT_MIN_CW_DIFF = -1*pi/6
 
-HOUGH_CIRCLE_THRESH = 125 # larger means less circles detected
+HOUGH_CIRCLE_THRESH = 120 # larger means less circles detected
 HOUGH_ACCUM_RES = 1.3 #larger means less resolution in accumulator
 HOUGH_MIN_SEPARATION = 20
 HOUGH_MIN_R = 50
@@ -47,8 +47,8 @@ TAPE_STRIP_MAX_ANGLE = 5*pi/8
 TAPE_STRIP_ANGLE_THRESH = 3*pi/8
 
 PERS_X_OFFSET = 85
-PERS_Y_OFFSET = 95
-ADDL_X_OFFSET = 50
+PERS_Y_OFFSET = 92
+ADDL_X_OFFSET = -20
 
 RECT_MIN_AR = 1.4 #min aspect ratio
 RECT_MAX_AR = 2.5 #max aspect ratio
