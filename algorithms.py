@@ -106,7 +106,7 @@ class Circle:
             int(round(self.r)), 
             color, thickness)
         cv2.putText(
-            img, "{:.2f}".format(self.r),
+            img, "{:.1f},{:.1f}".format(self.x, self.y),
             ( int(round(self.x)), int(round(self.y)) ),
             cv2.FONT_HERSHEY_SIMPLEX, 0.75, ORANGE, 1
         )
@@ -406,8 +406,9 @@ class Gauntlet:
         for rect in self.rects:
             coords = shiftImageCoords(img, rect.intrinsicVector.end)
             dataStr += "{},{};".format(*coords)
-        dataStr += "\n"
-        #print(dataStr)
+        centerCoords = shiftImageCoords(img, self.center)
+        dataStr += "{},{};\n".format(*centerCoords)
+        print(dataStr)
         serialObject.write(dataStr.encode("ascii", "ignore"))
 
 hsvLower = (0,0,0)
