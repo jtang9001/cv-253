@@ -408,7 +408,7 @@ class Gauntlet:
             dataStr += "{},{};".format(*coords)
         centerCoords = shiftImageCoords(img, self.center)
         dataStr += "{},{};\n".format(*centerCoords)
-        print(dataStr)
+        #print(dataStr)
         serialObject.write(dataStr.encode("ascii", "ignore"))
 
 hsvLower = (0,0,0)
