@@ -438,7 +438,7 @@ def preprocessFrame(frame):
 
     #edgedImg = autoCanny(blurredImg)
     
-    frame = cv2.cvtColor(threshedImg, cv2.COLOR_GRAY2BGR)
+    frame = cv2.cvtColor(blurredImg, cv2.COLOR_GRAY2BGR)
     return threshedImg, blurredImg, frame
 
 def findCircles(img):
