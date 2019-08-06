@@ -26,6 +26,10 @@ ENCIRCLE_MAX_R = 120
 ENCIRCLE_RECT_DIST_DEV = 0.3
 ENCIRCLE_MAX_RECTS = 8
 
+CIRCLE_PIX_VAL_THRESH = 10
+CIRCLE_PCT_DARK_THRESH = 0.04
+CIRCLE_CENTER_INV_RATIO = 3 #number to divide radius by 
+
 REF_VECT_MAX_CW_DIFF = -5*pi/6
 REF_VECT_MIN_CW_DIFF = -1*pi/6
 
@@ -108,7 +112,7 @@ class Circle:
         cv2.putText(
             img, "{:.1f},{:.1f}".format(self.x, self.y),
             ( int(round(self.x)), int(round(self.y)) ),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.75, ORANGE, 1
+            cv2.FONT_HERSHEY_SIMPLEX, 0.5, ORANGE, 1
         )
         
     def serialWrite(self, img, serialObject):
@@ -116,7 +120,30 @@ class Circle:
         dataStr = "P{},{};\n".format(*coords)
         #print(dataStr)
         serialObject.write(dataStr.encode("ascii", "ignore"))
-        
+
+class PixelCircle(Circle):
+    def __init__(self, x, y, r, pixels):
+        self.pixels = pixels
+        super().__init__(x,y,r)
+
+    def classifyDarkness(self):
+        self.dark = np.count_nonzero(self.pixels < CIRCLE_PIX_VAL_THRESH)/self.pixels.size > CIRCLE_PCT_DARK_THRESH
+        return self.dark
+
+    def draw(self, img):
+        super().draw(img)
+        if hasattr(self, "dark"):
+            cv2.putText(img, str(self.dark), (0,100), cv2.FONT_HERSHEY_SIMPLEX, 0.75, GREEN, 1)
+
+    def serialWrite(self, img, serialObject):
+        if hasattr(self, "dark") and self.dark:
+            coords = shiftImageCoords(img, self.center, ADDL_X_OFFSET)
+            dataStr = "P{},{};\n".format(*coords)
+            #print(dataStr)
+            serialObject.write(dataStr.encode("ascii", "ignore"))
+        else:
+            super().serialWrite(img, serialObject)
+            
 class ThreePointCircle(Circle):
     def __init__(self,a,b,c):
         x,y,z = a[0] + (a[1])*1j, b[0] + (b[1])*1j, c[0] + (c[1])*1j
@@ -394,14 +421,19 @@ class Gauntlet:
             #cv2.circle(frame, (int(self.center[0]), int(self.center[1])), 3, RED, 2)
             cv2.putText(
                 frame,
-                "{:.2f}".format(self.centerCircle.r),
-                (0,100),
+                self.getDataStr(),
+                (0,50),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.75, ORANGE, 1)
         
         if hasattr(self, "refVector"):
             self.refVector.draw(frame, color = VIOLET)
             
     def serialWrite(self, img, serialObject):
+        dataStr = self.getDataStr()
+        
+        serialObject.write(dataStr.encode("ascii", "ignore"))
+    
+    def getDataStr(self):
         dataStr = "G"
         for rect in self.rects:
             coords = shiftImageCoords(img, rect.intrinsicVector.end)
@@ -409,7 +441,7 @@ class Gauntlet:
         centerCoords = shiftImageCoords(img, self.center)
         dataStr += "{},{};\n".format(*centerCoords)
         #print(dataStr)
-        serialObject.write(dataStr.encode("ascii", "ignore"))
+        return dataStr
 
 hsvLower = (0,0,0)
 hsvUpper = (255,200,255)
@@ -457,7 +489,13 @@ def findCircles(img):
         for (x,y,r) in houghResults[0,:]:
             if r == 0:
                 continue
-            circles.append(Circle(x,y,r))
+            circles.append(PixelCircle(
+                x,y,r,
+                img[
+                    int(y-r/CIRCLE_CENTER_INV_RATIO):int(y+r/CIRCLE_CENTER_INV_RATIO), 
+                    int(x-r/CIRCLE_CENTER_INV_RATIO):int(x+r/CIRCLE_CENTER_INV_RATIO)
+                ]
+            ))
     else:
         #print("No circles found")
         return None
@@ -654,17 +692,21 @@ if __name__ == "__main__":
     import glob
     import traceback
 
-    for img in glob.glob("Tape photos/*.jpg"):
+    for img in glob.glob("JT Post Photos/*.jpg"):
         try:
             originalImg = cv2.imread(img)
             #originalImg = cv2.imread("gauntlet.jpg")
             resizedImg = imutils.resize(originalImg, width=IMGWIDTH)
 
             threshImg, houghImg, dispImg = preprocessFrame(resizedImg)
-            contours = getContours(threshImg)
-            tapeOutline, centerCircle = identifyTapeStrip(contours)
-            tapeOutline.draw(dispImg)
-            centerCircle.draw(dispImg)
+            houghImg = undistortPerspective(houghImg)
+            dispImg = cv2.cvtColor(houghImg, cv2.COLOR_GRAY2BGR)
+            circles = findCircles(houghImg)
+            if circles is not None:
+                print(circles[0].classifyDarkness())
+                circles[0].draw(dispImg)
+                #cv2.drawContours(dispImg, circles[0].classifyDarkness(), -1, GREEN, 1)
+
 
             cv2.imshow("Frame", dispImg)
             cv2.waitKey(0)
