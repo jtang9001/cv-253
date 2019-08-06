@@ -79,9 +79,11 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             
 
         if circles is not None:
+            circle = circles[0]
             dispImg = cv2.cvtColor(alg.autoCanny(houghImg), cv2.COLOR_GRAY2BGR)
-            circles[0].draw(dispImg)
-            circles[0].serialWrite(houghImg, ser)
+            circle.classifyDarkness()
+            circle.draw(dispImg)
+            circle.serialWrite(houghImg, ser)
 
         # if tapeCnt.descriptor != "N":
         #     tapeCnt.draw(dispImg)
