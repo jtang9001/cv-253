@@ -127,16 +127,19 @@ class PixelCircle(Circle):
         super().__init__(x,y,r)
 
     def classifyDarkness(self):
-        self.dark = np.count_nonzero(self.pixels < CIRCLE_PIX_VAL_THRESH)/self.pixels.size > CIRCLE_PCT_DARK_THRESH
-        return self.dark
+        try:
+            self.hasStone = np.count_nonzero(self.pixels < CIRCLE_PIX_VAL_THRESH)/self.pixels.size < CIRCLE_PCT_DARK_THRESH
+        except ZeroDivisionError:
+            self.hasStone = True
+        return self.hasStone
 
     def draw(self, img):
         super().draw(img)
-        if hasattr(self, "dark"):
-            cv2.putText(img, str(self.dark), (0,100), cv2.FONT_HERSHEY_SIMPLEX, 0.75, GREEN, 1)
+        if hasattr(self, "hasStone"):
+            cv2.putText(img, str(self.hasStone), (0,100), cv2.FONT_HERSHEY_SIMPLEX, 0.75, GREEN, 1)
 
     def serialWrite(self, img, serialObject):
-        if hasattr(self, "dark") and self.dark:
+        if hasattr(self, "hasStone") and not self.hasStone:
             coords = shiftImageCoords(img, self.center, ADDL_X_OFFSET)
             dataStr = "P{},{};\n".format(*coords)
             #print(dataStr)
@@ -424,8 +427,8 @@ class Gauntlet:
             cv2.putText(
                 frame,
                 self.dataStr,
-                (0,50),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.75, ORANGE, 1)
+                (0,25),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, ORANGE, 1)
         
         if hasattr(self, "refVector"):
             self.refVector.draw(frame, color = VIOLET)
