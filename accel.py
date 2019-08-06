@@ -6,7 +6,7 @@ except RuntimeError:
     print("Error importing RPi.GPIO! Use 'sudo' to run script")
 
 sensor = mpu6050(0x68)
-GPIO.setmode(GPIO.BOARD)
+GPIO.setmode(GPIO.BCM)
 GPIO.setup(18, GPIO.OUT, initial = GPIO.low)
 THRESH = 10
 
