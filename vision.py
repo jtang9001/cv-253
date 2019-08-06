@@ -67,8 +67,8 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         
         if gauntletObj is not None:
             if len(gauntletObj.rects) == 6:
-                gauntletObj.draw(dispImg)
                 gauntletObj.serialWrite(processedImg, ser)
+                gauntletObj.draw(dispImg)
             elif 3 <= len(gauntletObj.rects) < 6:
                 gauntletObj.draw(dispImg)
             circles = None

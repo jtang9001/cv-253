@@ -419,9 +419,11 @@ class Gauntlet:
         if hasattr(self, "center"):
             self.centerCircle.draw(frame)
             #cv2.circle(frame, (int(self.center[0]), int(self.center[1])), 3, RED, 2)
+        
+        if hasattr(self, "dataStr"):
             cv2.putText(
                 frame,
-                self.getDataStr(),
+                self.dataStr,
                 (0,50),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.75, ORANGE, 1)
         
@@ -429,19 +431,15 @@ class Gauntlet:
             self.refVector.draw(frame, color = VIOLET)
             
     def serialWrite(self, img, serialObject):
-        dataStr = self.getDataStr()
-        
-        serialObject.write(dataStr.encode("ascii", "ignore"))
-    
-    def getDataStr(self):
         dataStr = "G"
         for rect in self.rects:
             coords = shiftImageCoords(img, rect.intrinsicVector.end)
             dataStr += "{},{};".format(*coords)
         centerCoords = shiftImageCoords(img, self.center)
         dataStr += "{},{};\n".format(*centerCoords)
-        #print(dataStr)
-        return dataStr
+        self.dataStr = dataStr
+        
+        serialObject.write(dataStr.encode("ascii", "ignore"))
 
 hsvLower = (0,0,0)
 hsvUpper = (255,200,255)
