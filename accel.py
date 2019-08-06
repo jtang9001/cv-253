@@ -7,14 +7,14 @@ except RuntimeError:
 
 sensor = mpu6050(0x68)
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(18, GPIO.OUT, initial = GPIO.low)
-THRESH = 10
+GPIO.setup(18, GPIO.OUT, initial = GPIO.LOW)
+THRESH = 15
 
 try:
     while True:
         accelData = sensor.get_accel_data()
         mag = (accelData["x"] ** 2 + accelData["y"] ** 2 + accelData["z"] ** 2) ** (0.5)
-        print("x={x}, y={}, z={}".format(**accelData))
+        print("x={x}, y={y}, z={z}".format(**accelData))
         print("mag:", mag)
         if mag > THRESH:
             GPIO.output(18, GPIO.HIGH)
