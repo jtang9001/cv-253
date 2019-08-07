@@ -386,10 +386,18 @@ class Gauntlet:
                 if not REF_VECT_MAX_CW_DIFF < angleDiffCW(self.refVector.angle, rect.vector.angle) \
                  < REF_VECT_MIN_CW_DIFF
             ]
-                
-        
+
         except AttributeError:
             print("Attempted to generate ref vector without first assigning vectors to rects")
+    
+
+    def interpolateSlots(self):
+        assert hasattr(self, "refVector")
+
+        self.interpVecs = [
+            PolarVector(self.center, self.avgR*1.5, self.refAngle + i * (pi/5)) \
+            for i in range(6)
+        ]
 
     def getRectByNum(self, number):
         for rect in self.rects:
@@ -413,8 +421,13 @@ class Gauntlet:
                     "{},{}".format(*shiftImageCoords(frame, rect.intrinsicVector.end)),
                     (int(rect.center[0]), int(rect.center[1])),
                     cv2.FONT_HERSHEY_SIMPLEX,
-                    0.75, ORANGE, 1
+                    0.5, ORANGE, 1
                 )
+
+        if hasattr(self, "interpVecs"):
+            for vec in self.interpVecs:
+                vec.draw(frame, color = CYAN)
+                vec.drawEnd(frame, color = CYAN)
 
         # for circle in gauntlet.circles:
         #     circle.draw(frame)

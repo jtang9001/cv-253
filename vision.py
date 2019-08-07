@@ -70,6 +70,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
                 gauntletObj.serialWrite(processedImg, ser)
                 gauntletObj.draw(dispImg)
             elif 3 <= len(gauntletObj.rects) < 6:
+                gauntletObj.interpolateSlots()
                 gauntletObj.draw(dispImg)
             circles = None
             cv2.drawContours(dispImg, imageCnts, -1, alg.VIOLET, 1)
