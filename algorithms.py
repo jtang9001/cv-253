@@ -8,7 +8,7 @@ from math import pi
 #configuration constants
 
 POLY_APPROX_COEFF = 0.04
-DEFAULT_IMG_X_OFFSET = -30
+DEFAULT_IMG_X_OFFSET = -10
 IMGRES = (640,480)
 IMGWIDTH = IMGRES[0]
 IMGHEIGHT = IMGRES[1]
@@ -52,7 +52,7 @@ TAPE_STRIP_ANGLE_THRESH = 3*pi/8
 
 PERS_X_OFFSET = 85
 PERS_Y_OFFSET = 85
-ADDL_X_OFFSET = -15
+ADDL_X_OFFSET = -6
 
 RECT_MIN_AR = 1.4 #min aspect ratio
 RECT_MAX_AR = 2.5 #max aspect ratio
@@ -110,7 +110,7 @@ class Circle:
             int(round(self.r)), 
             color, thickness)
         cv2.putText(
-            img, "{:.1f}".format(self.r),
+            img, "{:.1f}".format(self.x),
             ( int(round(self.x)), int(round(self.y)) ),
             cv2.FONT_HERSHEY_SIMPLEX, 0.5, ORANGE, 1
         )
