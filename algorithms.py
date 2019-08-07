@@ -395,7 +395,7 @@ class Gauntlet:
         assert hasattr(self, "refVector")
 
         self.interpVecs = [
-            PolarVector(self.center, self.avgR*1.5, self.refAngle + i * (pi/5)) \
+            PolarVector(self.center, self.avgR*1.65, self.refAngle + i * (pi/5)) \
             for i in range(6)
         ]
 
@@ -448,9 +448,14 @@ class Gauntlet:
             
     def serialWrite(self, img, serialObject):
         dataStr = "G"
-        for rect in self.rects:
-            coords = shiftImageCoords(img, rect.intrinsicVector.end)
-            dataStr += "{},{};".format(*coords)
+        if hasattr(self, "interpVecs"):
+            for vec in self.interpVecs:
+                coords = shiftImageCoords(img, vec.end)
+                dataStr += "{},{};".format(*coords)
+        else:
+            for rect in self.rects:
+                coords = shiftImageCoords(img, rect.intrinsicVector.end)
+                dataStr += "{},{};".format(*coords)
         centerCoords = shiftImageCoords(img, self.center)
         dataStr += "{},{};\n".format(*centerCoords)
         self.dataStr = dataStr
