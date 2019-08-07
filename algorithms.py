@@ -15,6 +15,7 @@ IMGHEIGHT = IMGRES[1]
 IMGAREA = IMGRES[0] * IMGRES[1]
 
 TAPE_TO_HOLE_RATIO = 1.35
+INTERP_VECS_RATIO = 1.6
 
 PREP_GAUSS_SIZE = 7
 PREP_ADAPTIVE_BIN_SIZE = 101
@@ -395,7 +396,7 @@ class Gauntlet:
         assert hasattr(self, "refVector")
 
         self.interpVecs = [
-            PolarVector(self.center, self.avgR*1.65, self.refAngle + i * (pi/5)) \
+            PolarVector(self.center, self.avgR*INTERP_VECS_RATIO, self.refAngle + i * (pi/5)) \
             for i in range(6)
         ]
 
