@@ -33,8 +33,8 @@ CIRCLE_CENTER_INV_RATIO = 3 #number to divide radius by
 REF_VECT_MAX_CW_DIFF = -5*pi/6
 REF_VECT_MIN_CW_DIFF = -1*pi/6
 
-HOUGH_CIRCLE_THRESH = 120 # larger means less circles detected
-HOUGH_ACCUM_RES = 1.3 #larger means less resolution in accumulator
+HOUGH_CIRCLE_THRESH = 100 # larger means less circles detected
+HOUGH_ACCUM_RES = 1.4 #larger means less resolution in accumulator
 HOUGH_MIN_SEPARATION = 20
 HOUGH_MIN_R = 50
 HOUGH_MAX_R = 115
@@ -51,7 +51,7 @@ TAPE_STRIP_MAX_ANGLE = 5*pi/8
 TAPE_STRIP_ANGLE_THRESH = 3*pi/8
 
 PERS_X_OFFSET = 85
-PERS_Y_OFFSET = 92
+PERS_Y_OFFSET = 85
 ADDL_X_OFFSET = -15
 
 RECT_MIN_AR = 1.4 #min aspect ratio
@@ -110,7 +110,7 @@ class Circle:
             int(round(self.r)), 
             color, thickness)
         cv2.putText(
-            img, "{:.1f},{:.1f}".format(self.x, self.y),
+            img, "{:.1f}".format(self.r),
             ( int(round(self.x)), int(round(self.y)) ),
             cv2.FONT_HERSHEY_SIMPLEX, 0.5, ORANGE, 1
         )

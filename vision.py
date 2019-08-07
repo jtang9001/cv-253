@@ -80,7 +80,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 
         if circles is not None:
             circle = circles[0]
-            dispImg = cv2.cvtColor(houghImg, cv2.COLOR_GRAY2BGR)
+            dispImg = cv2.cvtColor(alg.autoCanny(houghImg), cv2.COLOR_GRAY2BGR)
             circle.classifyDarkness()
             circle.draw(dispImg)
             circle.serialWrite(houghImg, ser)
