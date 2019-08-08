@@ -400,6 +400,8 @@ class Gauntlet:
             for i in range(6)
         ]
 
+        self.interpVecs.reverse()
+
     def getRectByNum(self, number):
         for rect in self.rects:
             if hasattr(rect, "number"):
